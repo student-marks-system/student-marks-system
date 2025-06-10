@@ -10,31 +10,29 @@ use Slim\App;
 use Slim\Interfaces\RouteCollectorProxyInterface as Group;
 
 
-
 return function (App $app) {
-    $app->options('/{routes:.*}', function (Request $request, Response $response) {
-        // CORS Pre-Flight OPTIONS Request Handler
-        return $response;
-    });
+    $app->post('/api/login', function (Request $request, Response $response) {
+        $data = $request->getParsedBody();
+        $username = $data['username'] ?? '';
+        $password = $data['password'] ?? '';
 
-     $app->post('/api/login', \App\Application\Actions\User\LoginAction::class);
+        $pdo = new PDO("mysql:host=localhost;dbname=course_marks_db", "root", "");
+        $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
+        $stmt->execute([$username]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    $app->get('/api/secret', function (Request $request, Response $response) {
-        $user = $request->getAttribute('user');
+        if (!$user || !password_verify($password, $user['password_hash'])) {
+            $response->getBody()->write(json_encode([
+                'status' => 'error',
+                'message' => 'Invalid credentials'
+            ]));
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(401);
+        }
+
         $response->getBody()->write(json_encode([
-            'message' => "Hello, {$user['username']}! You are a {$user['user_type']}."
+            'status' => 'success',
+            'role' => $user['user_type']
         ]));
         return $response->withHeader('Content-Type', 'application/json');
-    })->add(\App\Application\Middleware\RoleMiddleware::class);
-
-    $app->get('/', function (Request $request, Response $response) {
-        $response->getBody()->write('Hello world!');
-        return $response;
     });
-
-    $app->group('/users', function (Group $group) {
-        $group->get('', ListUsersAction::class);
-        $group->get('/{id}', ViewUserAction::class);
-    });
-
 };
