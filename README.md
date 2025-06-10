@@ -10,25 +10,24 @@ student-marks-system/
 ├── frontend/ # Vue.js frontend app
 └── backend/ # PHP Slim backend API
 
-
-
 ---
 
 ## 🚀 Technologies Used
 
-| Layer     | Technology           |
-|-----------|----------------------|
-| Frontend  | Vue.js (Vue CLI), Axios, Chart.js |
-| Backend   | PHP Slim Framework, Composer |
-| Database  | MySQL                |
-| API Comm  | RESTful API (JSON)   |
-| Version Control | Git + GitHub   |
+| Layer           | Technology                        |
+| --------------- | --------------------------------- |
+| Frontend        | Vue.js (Vue CLI), Axios, Chart.js |
+| Backend         | PHP Slim Framework, Composer      |
+| Database        | MySQL                             |
+| API Comm        | RESTful API (JSON)                |
+| Version Control | Git + GitHub                      |
 
 ---
 
 ## 👥 User Roles & Features
 
 ### 👨‍🏫 Lecturer
+
 - Secure login
 - Manage student records
 - Add/edit continuous assessment marks (70%)
@@ -39,6 +38,7 @@ student-marks-system/
 - Notify students of mark updates
 
 ### 👩‍🎓 Student
+
 - Login with matric number and PIN
 - View marks and breakdown
 - Progress bar visualization
@@ -48,6 +48,7 @@ student-marks-system/
 - Request remark with justification
 
 ### 👨‍💼 Academic Advisor
+
 - Secure login
 - Access advisee's mark breakdown
 - Highlight at-risk students (GPA < 2.0)
@@ -55,6 +56,7 @@ student-marks-system/
 - Export consultation reports
 
 ### 🛠 Admin (Optional)
+
 - Manage users and roles
 - Assign lecturers to courses
 - View logs and activity
@@ -65,7 +67,8 @@ student-marks-system/
 ## 🧪 Project Setup
 
 ### 1. Clone the Repository
-```bash
+
+````bash
 git clone https://github.com/YOUR-ORG-NAME/student-marks-system.git
 cd student-marks-system
 2. Setup Frontend
@@ -89,6 +92,17 @@ Follow a branching strategy (e.g., frontend-dev, backend-dev, main)
 
 📃 License
 This project is part of a university assignment for the Web Technology course (SECJ3483). For educational purposes only.
+
+## 📦 Database Setup
+
+### 1. Create the Database in MySQL
+
+Login to your MySQL server and create a new database:
+
+```sql
+CREATE DATABASE course_marks_db;
+
+
 
 ## 👥 Team Responsibilities
 
@@ -155,3 +169,4 @@ Our team has divided the project into functional modules based on expertise and 
 - Add Private Notes/Meeting Records per Advisee
 - Export Student Consultation Reports
 - View Advisee's Overall Course Performance
+````
