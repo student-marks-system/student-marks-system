@@ -95,14 +95,22 @@ This project is part of a university assignment for the Web Technology course (S
 
 ## 📦 Database Setup
 
-### 1. Create the Database in MySQL
+1. Create the Database in MySQL
 
 Login to your MySQL server and create a new database:
 
 ```sql
 CREATE DATABASE course_marks_db;
 
+2. Import the Schema
+Run the following command to import the provided schema and sample data:
 
+mysql -u your_username -p course_marks_db < database_schema.sql
+
+to test the connection
+1- make suer the db_test.php file is exist in the backend root folder
+2- run the the following command in side the backend folder  php -S localhost:8080
+3- go to http://localhost:8080/db_test.php
 
 ## 👥 Team Responsibilities
 
