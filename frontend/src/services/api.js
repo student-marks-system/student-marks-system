@@ -451,43 +451,80 @@ export const lecturerAPI = {
   },
 
   // Bulk upload marks via CSV
-  bulkUploadMarks: async (courseId, csvFile) => {
-    try {
-      const formData = new FormData();
-      formData.append("csv_file", csvFile);
+  // bulkUploadMarks: async (courseId, csvFile) => {
+  //   try {
+  //     const formData = new FormData();
+  //     formData.append("csv_file", csvFile);
 
-      const response = await api.post(
-        `/course/${courseId}/marks/bulk-upload`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-      return handleApiResponse(response);
-    } catch (error) {
-      return handleApiError(error);
-    }
-  },
+  //     const response = await api.post(
+  //       `/course/${courseId}/marks/bulk-upload`,
+  //       formData,
+  //       {
+  //         headers: {
+  //           "Content-Type": "multipart/form-data",
+  //         },
+  //       }
+  //     );
+  //     return handleApiResponse(response);
+  //   } catch (error) {
+  //     return handleApiError(error);
+  //   }
+  // },
+  bulkUploadMarks: async (lecturerId, courseId, csvFile) => {
+  try {
+    const formData = new FormData();
+    formData.append("csv_file", csvFile);
+
+    const response = await api.post(
+      `/lecturer/${lecturerId}/course/${courseId}/marks/bulk-upload`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return handleApiResponse(response);
+  } catch (error) {
+    return handleApiError(error);
+  }
+},
+
 
   // Export marks as CSV
-  exportMarks: async (courseId) => {
-    try {
-      const response = await api.get(`/course/${courseId}/marks/export`, {
-        responseType: "blob",
-      });
-      return {
-        success: true,
-        data: response.data,
-        filename:
-          response.headers["content-disposition"]?.split("filename=")[1] ||
-          "marks.csv",
-      };
-    } catch (error) {
-      return handleApiError(error);
-    }
-  },
+  // exportMarks: async (courseId) => {
+  //   try {
+  //     const response = await api.get(`/course/${courseId}/marks/export`, {
+  //       responseType: "blob",
+  //     });
+  //     return {
+  //       success: true,
+  //       data: response.data,
+  //       filename:
+  //         response.headers["content-disposition"]?.split("filename=")[1] ||
+  //         "marks.csv",
+  //     };
+  //   } catch (error) {
+  //     return handleApiError(error);
+  //   }
+  // },
+exportMarks: async (courseId) => {
+  try {
+    const lecturerId = authService.getCurrentUserId(); // Ensure this returns the logged-in lecturer's ID
+    const response = await api.get(`/lecturer/${lecturerId}/course/${courseId}/marks/export`, {
+      responseType: "blob",
+    });
+    return {
+      success: true,
+      data: response.data,
+      filename:
+        response.headers["content-disposition"]?.split("filename=")[1] ||
+        "marks.csv",
+    };
+  } catch (error) {
+    return handleApiError(error);
+  }
+},
 
   // Get course analytics
   getCourseAnalytics: async (courseId) => {
@@ -498,6 +535,19 @@ export const lecturerAPI = {
       return handleApiError(error);
     }
   },
+  //reamrks
+  updateRemarks: async (lecturerId, markId, remarks) => {
+  try {
+    const response = await api.put(
+      `/lecturer/${lecturerId}/marks/${markId}/remarks`,
+      { remarks }
+    );
+    return handleApiResponse(response);
+  } catch (error) {
+    return handleApiError(error);
+  }
+},
+
 
   // Send notification to students
   sendNotification: async (courseId, notificationData) => {

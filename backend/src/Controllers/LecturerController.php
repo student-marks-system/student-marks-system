@@ -598,6 +598,48 @@ class LecturerController extends BaseController
         }
     }
 
+    //reamrks
+    public function updateRemarks(Request $request, Response $response, array $args): Response
+{
+    try {
+        $lecturerId = (int)$args['lecturerId'];
+        $markId = (int)$args['markId'];
+
+        $data = $request->getParsedBody();
+        $remarks = trim($data['remarks'] ?? '');
+
+        // Check if the mark exists and is assigned to this lecturer
+        $checkSql = "
+            SELECT sm.*, ac.course_id, cl.lecturer_id
+            FROM student_marks sm
+            JOIN assessment_components ac ON sm.assessment_component_id = ac.id
+            JOIN course_lecturers cl ON ac.course_id = cl.course_id
+            WHERE sm.id = ? AND cl.lecturer_id = ?
+        ";
+        $stmt = $this->db->prepare($checkSql);
+        $stmt->execute([$markId, $lecturerId]);
+        $mark = $stmt->fetch();
+
+        if (!$mark) {
+            return $this->errorResponse($response, 'Mark not found or access denied', 404);
+        }
+
+        // Update the remarks
+        $updateSql = "
+            UPDATE student_marks 
+            SET remarks = ?, updated_at = NOW() 
+            WHERE id = ?
+        ";
+        $stmt = $this->db->prepare($updateSql);
+        $stmt->execute([$remarks, $markId]);
+
+        return $this->successResponse($response, ['message' => 'Remarks updated successfully']);
+    } catch (\Exception $e) {
+        return $this->errorResponse($response, 'Failed to update remarks: ' . $e->getMessage(), 500);
+    }
+}
+
+
     /**
      * Get course analytics
      * GET /api/lecturer/{lecturerId}/course/{courseId}/analytics

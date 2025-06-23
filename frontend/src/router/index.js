@@ -1,17 +1,3 @@
-<<<<<<< Updated upstream
-import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
-import StudentDashboard from '../views/StudentDashboard.vue'
-import LecturerDashboard from '../views/LecturerDashboard.vue'
-import AdminDashboard from '../views/AdminDashboard.vue'
-
-const routes = [
-  { path: '/', name: 'Home', component: HomeView },
-  { path: '/student', name: 'StudentDashboard', component: StudentDashboard },
-  { path: '/lecturer', name: 'LecturerDashboard', component: LecturerDashboard },
-  { path: '/admin', name: 'AdminDashboard', component: AdminDashboard }
-]
-=======
 import { createRouter, createWebHistory } from "vue-router";
 
 // Student Views
@@ -179,14 +165,25 @@ const routes = [
       },
       //azmain
       {
-  path: "course/:courseId/assessments",
-  name: "AssessmentListView",
-  component: () => import("../views/LecturerView/AssessmentManagement/AssessmentListView.vue"),
-  meta: {
-    requiresAuth: true,
-    roles: ["lecturer"],
-  },
+        path: "course/:courseId/assessments",
+        name: "AssessmentListView",
+        component: () =>
+          import(
+            "../views/LecturerView/AssessmentManagement/AssessmentListView.vue"
+          ),
+        meta: {
+          requiresAuth: true,
+          roles: ["lecturer"],
+        },
       },
+      {
+        path: "/lecturer/course/:courseId/remarks",
+        name: "AddRemarks",
+        component: () => import("@/views/LecturerView/AddRemarks.vue"),
+      },
+
+      //azmain end
+
       {
         path: "course/:courseId",
         name: "LecturerCourseView",
@@ -315,32 +312,12 @@ const routes = [
     redirect: "/login",
   },
 ];
->>>>>>> Stashed changes
 
 const router = createRouter({
   history: createWebHistory(),
-  routes
-})
+  routes,
+});
 
-<<<<<<< Updated upstream
-export default router
-
-
-// const routes = [
-//   {
-//     path: "/",
-//     name: "Home",
-//     component: HomeView,
-//   },
-// ];
-
-// const router = createRouter({
-//   history: createWebHistory(),
-//   routes,
-// });
-
-// export default router;
-=======
 // Navigation guards
 router.beforeEach((to, from, next) => {
   const isAuthenticated = authService.isAuthenticated();
@@ -396,4 +373,3 @@ router.afterEach((to) => {
 });
 
 export default router;
->>>>>>> Stashed changes

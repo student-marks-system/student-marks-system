@@ -16,14 +16,19 @@
             <span class="btn-icon">📊</span>
             Export Marks
           </button>
-          <button class="action-btn primary" @click="bulkUploadCSV">
+          <input
+            type="file"
+            ref="csvInput"
+            @change="uploadCSVFile"
+            accept=".csv"
+            style="display: none"
+          />
+
+          <button class="action-btn primary" @click="$refs.csvInput.click()">
             <span class="btn-icon">📤</span>
             Bulk Upload CSV
           </button>
-          <button class="action-btn secondary" @click="addRemarks">
-            <span class="btn-icon">💬</span>
-            Add Feedback/Remarks
-          </button>
+
         </div>
       </div>
     </div>
@@ -51,6 +56,7 @@
           <p>Assessment Components</p>
         </div>
       </div>
+      
       <div class="stat-card">
         <div class="stat-icon">✅</div>
         <div class="stat-content">
@@ -149,7 +155,68 @@
         <p>You haven't been assigned to any courses yet.</p>
       </div>
     </div>
+    
+    <!-- remarks view trial-->
+     <div class="courses-section">
+  <div class="section-header">
+    <h2>My Courses</h2>
+  </div>
 
+  <div class="courses-grid">
+    <div
+      v-for="course in courses"
+      :key="course.course_id"
+      class="course-card"
+    >
+      <div class="course-header">
+        <div class="course-info">
+          <h3 class="course-code">{{ course.course_code }}</h3>
+          <h4 class="course-name">{{ course.course_name }}</h4>
+          <p class="course-semester">{{ course.semester }}</p>
+        </div>
+        <div class="course-status">
+          <span class="status-badge active">Active</span>
+        </div>
+      </div>
+
+      <div class="course-stats">
+        <div class="stat-item">
+          <span class="stat-label">Students</span>
+          <span class="stat-value">{{ course.enrolled_students }}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Components</span>
+          <span class="stat-value">{{ course.total_components }}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Graded</span>
+          <span class="stat-value">{{ course.graded_components }}</span>
+        </div>
+      </div>
+
+      <div class="course-actions">
+        <router-link
+          :to="`/lecturer/course/${course.course_id}/remarks`"
+          class="action-btn small"
+        >
+          💬 Add Feedback/Remarks
+        </router-link>
+        <button
+          class="action-btn small"
+          @click.stop="viewStudents(course.course_id)"
+        >
+          View Students
+        </button>
+        <button
+          class="action-btn small"
+          @click.stop="exportCourseMarks(course.course_id)"
+        >
+          Export
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
     <!-- Recent Activities -->
     <div class="recent-activities">
       <div class="section-header">
@@ -327,6 +394,38 @@ export default {
         hour: "2-digit",
         minute: "2-digit",
       });
+    },
+
+    async uploadCSVFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append("csv_file", file);
+
+      try {
+        const courseId = this.courses[0]?.course_id; // Replace logic to pick correct course
+        const response = await lecturerAPI.bulkUploadMarks(
+          this.lecturerId,
+          courseId,
+          file
+        );
+        if (response.success) {
+          alert(
+            `Upload complete. Success: ${response.data.success_count}, Errors: ${response.data.error_count}`
+          );
+          if (response.data.errors.length > 0) {
+            console.warn("Upload Errors:", response.data.errors);
+          }
+        } else {
+          alert("CSV upload failed.");
+        }
+      } catch (error) {
+        console.error("CSV Upload Error:", error);
+        alert("An error occurred during CSV upload.");
+      } finally {
+        event.target.value = ""; // Reset file input
+      }
     },
   },
 };
