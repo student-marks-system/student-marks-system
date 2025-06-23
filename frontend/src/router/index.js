@@ -24,6 +24,16 @@ const routes = [
     name: 'EnrollmentPanel',
    component: () => import('../views/EnrollmentView/EnrollmentPanel.vue')
   },
+  {
+    path: '/marks',
+    name: 'MarksPanel',
+   component: () => import('../views/MarksView/MarksPanel.vue')
+  },
+  {
+    path: '/notification',
+    name: 'NotificationPanel',
+   component: () => import('../views/NotificationView/NotificationPanel.vue')
+  },
   
 ];
 
