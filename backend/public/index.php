@@ -33,4 +33,5 @@ $app->add(function ($request, $handler) {
 
 (require __DIR__ . '/../routes/notifications.php')($app);
 
+(require __DIR__ . '/../routes/students-components.php')($app);
 $app->run();
