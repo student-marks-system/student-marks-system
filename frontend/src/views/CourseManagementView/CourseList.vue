@@ -1,70 +1,66 @@
 <template>
-  <div class="container">
-    <h1 class="title">🎓 Course Management Dashboard</h1>
+  <div class="course-list">
+    <h2>📘 Manage Courses</h2>
 
-    <!-- Add Course Form -->
-    <form @submit.prevent="addCourse" class="add-course-form">
-      <h2>Add New Course</h2>
+    <!-- Alert Message -->
+    <div v-if="message" :class="['alert', messageType]">{{ message }}</div>
+
+    <!-- Add / Edit Form -->
+    <form @submit.prevent="submitForm" class="form">
       <div class="form-group">
-        <input v-model="newCourse.course_code" placeholder="Course Code (e.g., CS101)" required />
-        <input v-model="newCourse.course_name" placeholder="Course Name (e.g., Programming I)" required />
-        <input type="number" v-model.number="newCourse.credits" placeholder="Credits (e.g., 3)" required />
-        <input v-model="newCourse.semester" placeholder="Semester (e.g., 1)" required />
-        <input v-model="newCourse.academic_year" placeholder="Academic Year (e.g., 2024/2025)" required />
-        <button type="submit">➕ Add Course</button>
+        <label>Course Code</label>
+        <input v-model="form.course_code" required />
       </div>
+      <div class="form-group">
+        <label>Course Name</label>
+        <input v-model="form.course_name" required />
+      </div>
+      <div class="form-group">
+        <label>Credits</label>
+        <input v-model="form.credits" type="number" required />
+      </div>
+      <div class="form-group">
+        <label>Semester</label>
+        <input v-model="form.semester" required />
+      </div>
+      <div class="form-group">
+        <label>Academic Year</label>
+        <input v-model="form.academic_year" required />
+      </div>
+
+      <button type="submit" class="btn primary">
+        {{ editId ? 'Update' : 'Add' }} Course
+      </button>
+      <button type="button" class="btn" v-if="editId" @click="resetForm">Cancel</button>
     </form>
 
-    <!-- Course Grid -->
-    <div v-if="courses.length" class="course-grid">
-      <div v-for="course in courses" :key="course.id" class="course-card">
-        <div class="course-header">
-          <div v-if="editingCourse && editingCourse.id === course.id">
-            <input v-model="editingCourse.course_code" />
-            <input v-model="editingCourse.course_name" />
+    <!-- Course List -->
+    <ul class="course-items">
+      <li v-for="course in courses" :key="course.id" class="course-card">
+        <div class="course-info">
+          <div class="title">
+            <strong class="code">{{ course.course_code }}</strong> — <span class="name">{{ course.course_name }}</span>
           </div>
-          <div v-else>
-            <h3>{{ course.course_code }}: {{ course.course_name }}</h3>
+          <div class="tags">
+            <span class="tag">Credits: {{ course.credits }}</span>
+            <span class="tag">Semester: {{ course.semester }}</span>
+            <span class="tag">Year: {{ course.academic_year }}</span>
           </div>
-          <span :class="['badge', course.is_active ? 'active' : 'inactive']">
-            {{ course.is_active ? 'ACTIVE' : 'INACTIVE' }}
-          </span>
         </div>
-
-        <div class="course-details">
-          <p><strong>Credits:</strong> {{ course.credits }}</p>
-          <p><strong>Semester:</strong> {{ course.semester }}</p>
-          <p><strong>Academic Year:</strong> {{ course.academic_year }}</p>
-          <p><strong>Created:</strong> {{ formatDate(course.created_at) }}</p>
-          <p><strong>Updated:</strong> {{ formatDate(course.updated_at) }}</p>
+        <div class="actions">
+          <button @click="editCourse(course)" class="btn small edit">✏️</button>
+          <button @click="confirmDelete(course)" class="btn small delete">🗑️</button>
         </div>
+      </li>
+    </ul>
 
-        <div class="course-actions">
-          <template v-if="editingCourse && editingCourse.id === course.id">
-            <button @click="updateCourse" class="btn save">💾 Save</button>
-            <button @click="cancelEdit" class="btn cancel">✖ Cancel</button>
-          </template>
-          <template v-else>
-            <button @click="editCourse(course)" class="btn edit">✏️ Edit</button>
-            <button @click="askDelete(course)" class="btn delete" title="Delete this course">🗑 Delete</button>
-          </template>
-        </div>
-      </div>
-    </div>
-
-    <!-- Empty State -->
-    <div v-else class="empty-state">
-      <p>No courses found. Use the form above to add a new course 📖</p>
-    </div>
-
-    <!-- Delete Confirmation Modal -->
-    <div v-if="showDeleteModal" class="modal-overlay">
+    <!-- Custom Delete Confirmation Modal -->
+    <div v-if="showModal" class="modal-overlay">
       <div class="modal">
-        <h3>Confirm Deletion</h3>
-        <p>Are you sure you want to delete <strong>{{ courseToDelete?.course_name }}</strong>?</p>
+        <p>Are you sure you want to delete <strong>{{ toDelete.course_code }}</strong> — {{ toDelete.course_name }}?</p>
         <div class="modal-actions">
-          <button @click="confirmDelete(courseToDelete.id)" class="btn confirm">✔ Yes, Delete</button>
-          <button @click="cancelDelete" class="btn cancel">✖ Cancel</button>
+          <button @click="deleteCourseConfirmed" class="btn delete">Yes, Delete</button>
+          <button @click="cancelDelete" class="btn">Cancel</button>
         </div>
       </div>
     </div>
@@ -72,325 +68,296 @@
 </template>
 
 <script>
+import api from '@/api';
+
 export default {
   data() {
     return {
       courses: [],
-      newCourse: {
-        course_code: "",
-        course_name: "",
-        credits: 3,
-        semester: "1",
-        academic_year: "2024/2025",
-        is_active: true,
+      form: {
+        course_code: '',
+        course_name: '',
+        credits: '',
+        semester: '',
+        academic_year: '',
+        is_active: true
       },
-      editingCourse: null,
-      nextId: 6,
-      showDeleteModal: false,
-      courseToDelete: null,
+      editId: null,
+      message: '',
+      messageType: '',
+      showModal: false,
+      toDelete: null
     };
-  },
-  mounted() {
-    this.fetchCourses();
   },
   methods: {
     fetchCourses() {
-      this.courses = [
-        {
-          id: 1,
-          course_code: "CS101",
-          course_name: "Introduction to Programming",
-          credits: 3,
-          semester: "1",
-          academic_year: "2024/2025",
-          is_active: true,
-          created_at: "2024-01-10",
-          updated_at: "2024-03-15",
-        },
-        {
-          id: 2,
-          course_code: "MATH201",
-          course_name: "Calculus II",
-          credits: 4,
-          semester: "2",
-          academic_year: "2024/2025",
-          is_active: false,
-          created_at: "2024-02-05",
-          updated_at: "2024-04-20",
-        },
-      ];
+      api.get('/courses')
+        .then(res => this.courses = res.data)
+        .catch(err => this.showMessage(this.errToText(err), 'error'));
     },
-    addCourse() {
-      const newC = {
-        ...this.newCourse,
-        id: this.nextId++,
-        is_active: true,
-        created_at: new Date().toISOString().split("T")[0],
-        updated_at: new Date().toISOString().split("T")[0],
-      };
-      this.courses.push(newC);
-      this.newCourse = {
-        course_code: "",
-        course_name: "",
-        credits: 3,
-        semester: "1",
-        academic_year: "2024/2025",
-        is_active: true,
-      };
+    submitForm() {
+      const isUpdate = !!this.editId;
+      const url = isUpdate ? `/courses/${this.editId}` : '/courses';
+      const method = isUpdate ? api.put : api.post;
+
+      method(url, this.form)
+        .then(() => {
+          this.fetchCourses();
+          this.resetForm();
+          this.showMessage(`Course ${isUpdate ? 'updated' : 'added'}!`, 'success');
+        })
+        .catch(err => this.showMessage(this.errToText(err), 'error'));
     },
     editCourse(course) {
-      this.editingCourse = { ...course };
+      this.form = { ...course };
+      this.editId = course.id;
     },
-    updateCourse() {
-      const index = this.courses.findIndex(c => c.id === this.editingCourse.id);
-      if (index !== -1) {
-        this.editingCourse.updated_at = new Date().toISOString().split("T")[0];
-        this.courses[index] = { ...this.editingCourse };
-      }
-      this.editingCourse = null;
-    },
-    cancelEdit() {
-      this.editingCourse = null;
-    },
-    askDelete(course) {
-      this.courseToDelete = course;
-      this.showDeleteModal = true;
-    },
-    confirmDelete(id) {
-      this.courses = this.courses.filter(c => c.id !== id);
-      this.cancelDelete();
+    confirmDelete(course) {
+      this.toDelete = course;
+      this.showModal = true;
     },
     cancelDelete() {
-      this.showDeleteModal = false;
-      this.courseToDelete = null;
+      this.toDelete = null;
+      this.showModal = false;
     },
-    formatDate(date) {
-      if (!date) return "N/A";
-      return new Date(date).toLocaleDateString();
+    deleteCourseConfirmed() {
+      api.delete(`/courses/${this.toDelete.id}`)
+        .then(() => {
+          this.fetchCourses();
+          this.showMessage('Course deleted.', 'success');
+        })
+        .catch(err => this.showMessage(this.errToText(err), 'error'))
+        .finally(() => {
+          this.cancelDelete();
+        });
     },
+    resetForm() {
+      this.form = {
+        course_code: '',
+        course_name: '',
+        credits: '',
+        semester: '',
+        academic_year: '',
+        is_active: true
+      };
+      this.editId = null;
+    },
+    showMessage(msg, type) {
+      this.message = msg;
+      this.messageType = type;
+      setTimeout(() => {
+        this.message = '';
+        this.messageType = '';
+      }, 3000);
+    },
+    errToText(err) {
+      if (err.response) {
+        return `Server error ${err.response.status}: ${err.response.data || err.message}`;
+      }
+      return `Action Failed: ${err.message}`;
+    }
   },
+  mounted() {
+    this.fetchCourses();
+  }
 };
 </script>
 
-<style scoped>
-.container {
-  max-width: 1000px;
-  margin: 40px auto;
-  padding: 20px;
-  background: #f8f9fa;
+<style>
+.course-list {
+  max-width: 700px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: #ffffff;
   border-radius: 12px;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  font-family: "Segoe UI", sans-serif;
 }
 
-.title {
+h2 {
   text-align: center;
-  font-size: 2.8rem;
-  margin-bottom: 30px;
-  color: #2c3e50;
+  margin-bottom: 1rem;
+  color: #333;
 }
 
-.add-course-form {
-  background: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  margin-bottom: 40px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+.alert {
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: 6px;
+  font-weight: bold;
+  text-align: center;
+}
+.alert.success {
+  background-color: #e6ffed;
+  color: #1a7f37;
+  border: 1px solid #1a7f37;
+}
+.alert.error {
+  background-color: #ffe6e6;
+  color: #c53030;
+  border: 1px solid #c53030;
 }
 
-.add-course-form h2 {
-  margin-bottom: 20px;
-  color: #34495e;
+.form {
+  margin-bottom: 2rem;
 }
 
 .form-group {
-  display: grid;
-  gap: 15px;
+  margin-bottom: 1rem;
 }
 
-.form-group input {
-  padding: 12px 15px;
-  border: 2px solid #ddd;
-  border-radius: 6px;
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+}
+
+input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
   font-size: 1rem;
-  transition: border 0.3s;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  transition: border-color 0.3s ease;
 }
 
-.form-group input:focus {
-  border-color: #3498db;
+input:focus {
+  border-color: #007bff;
   outline: none;
 }
 
-.form-group button {
-  background: #3498db;
-  color: #fff;
-  padding: 14px;
+.btn {
+  display: inline-block;
+  padding: 0.45rem 1rem;
+  margin-top: 0.5rem;
+  margin-right: 0.5rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+  background-color: #f0f0f0;
   border: none;
   border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: background 0.3s;
+  transition: background-color 0.3s ease;
 }
 
-.form-group button:hover {
-  background: #2980b9;
+.btn:hover {
+  background-color: #ddd;
 }
 
-.course-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 25px;
-}
-
-.course-card {
-  background: #fff;
-  border-radius: 10px;
-  padding: 25px;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.05);
-  transition: transform 0.2s;
-}
-
-.course-card:hover {
-  transform: translateY(-5px);
-}
-
-.course-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.course-header h3 {
-  margin: 0;
-  font-size: 1.3rem;
-  color: #2c3e50;
-}
-
-.badge {
-  padding: 5px 12px;
-  border-radius: 50px;
-  font-size: 0.75rem;
-  font-weight: bold;
+.btn.primary {
+  background-color: #007bff;
   color: #fff;
 }
-
-.badge.active {
-  background: #2ecc71;
+.btn.primary:hover {
+  background-color: #0056b3;
 }
 
-.badge.inactive {
-  background: #e74c3c;
-}
-
-.course-header input {
-  margin-right: 10px;
-  padding: 6px 8px;
-}
-
-.course-details {
-  margin-top: 15px;
-  color: #555;
-}
-
-.course-details p {
-  margin: 4px 0;
-}
-
-.course-actions {
-  margin-top: 20px;
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.btn {
-  padding: 8px 14px;
-  font-size: 0.85rem;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
+.btn.small {
+  font-size: 0.8rem;
+  padding: 0.3rem 0.6rem;
 }
 
 .btn.edit {
-  background: #f1c40f;
-  color: #fff;
+  background-color: #ffc107;
+  color: #000;
 }
-
 .btn.edit:hover {
-  background: #d4ac0d;
+  background-color: #e0a800;
 }
 
 .btn.delete {
-  background: #e74c3c;
+  background-color: #dc3545;
   color: #fff;
 }
-
 .btn.delete:hover {
-  background: #c0392b;
+  background-color: #b02a37;
 }
 
-.btn.save {
-  background: #2ecc71;
-  color: #fff;
+.course-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
-.btn.cancel {
-  background: #7f8c8d;
-  color: #fff;
+.course-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  background-color: #f9f9f9;
+  border-left: 4px solid #007bff;
+  border-radius: 6px;
+  transition: box-shadow 0.2s ease;
 }
 
-.btn.confirm {
-  background: #e67e22;
-  color: white;
+.course-card:hover {
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
 }
 
-.btn.confirm:hover {
-  background: #d35400;
+.course-info {
+  max-width: 80%;
 }
 
-.empty-state {
-  text-align: center;
-  font-size: 1.1rem;
-  color: #888;
+.title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.3rem;
 }
 
-/* Modal Styles */
+.name {
+  color: #333;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.tag {
+  background-color: #eef2f6;
+  color: #333;
+  font-size: 0.85rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  border: 1px solid #d0d7de;
+}
+
+.actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+/* Custom Modal Styles */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.4);
+  background-color: rgba(0, 0, 0, 0.4);
   display: flex;
-  justify-content: center;
   align-items: center;
-  z-index: 999;
+  justify-content: center;
+  z-index: 9999;
 }
 
 .modal {
-  background: #fff;
-  padding: 30px;
+  background: white;
+  padding: 2rem;
   border-radius: 10px;
-  width: 350px;
-  max-width: 90%;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  max-width: 400px;
+  width: 90%;
   text-align: center;
-}
-
-.modal h3 {
-  margin-bottom: 15px;
-  font-size: 1.4rem;
-  color: #2c3e50;
-}
-
-.modal p {
-  font-size: 1rem;
-  margin-bottom: 20px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
 }
 
 .modal-actions {
+  margin-top: 1.5rem;
   display: flex;
   justify-content: center;
-  gap: 15px;
+  gap: 1rem;
 }
+
+
 </style>

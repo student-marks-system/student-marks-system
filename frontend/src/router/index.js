@@ -1,15 +1,15 @@
 import { createRouter, createWebHistory } from "vue-router";
+
+// Views
 import HomeView from "../views/HomeView.vue";
-
-
-// Course Management Views (Module 3)
 import CourseList from "../views/CourseManagementView/CourseList.vue";
 import AssignLecturers from "../views/CourseManagementView/AssignLecturers.vue";
 import MarksUpdate from "../views/MarksUpdateView/MarksUpdate.vue";
 import SystemLogs from "../views/SystemLogsView/SystemLogs.vue";
+
 // Layouts
-import LecturerLayout from "../layouts/LecturerLayout.vue";
-import AdminLayout from "../layouts/AdminLayout.vue";
+import LecturerLayout from "../layouts/LecturerLayout.vue"; 
+import AdminLayout from "../layouts/AdminLayout.vue"; 
 
 const routes = [
   {
@@ -17,46 +17,50 @@ const routes = [
     name: "Home",
     component: HomeView,
   },
-
-    // Course Management Routes (Module 3)
   {
     path: "/courses",
-    component: LecturerLayout, 
+    component: LecturerLayout,
     children: [
       {
         path: "",
         name: "CourseList",
         component: CourseList,
       },
+    ],
+  },
+  {
+    path: "/admin",
+    component: AdminLayout,
+    children: [
       {
-        path: "assign-lecturers",
+        path: "assign-lecturers", 
         name: "AssignLecturers",
         component: AssignLecturers,
       },
-    ],
-  },
-   {
-    path: "/admin",
-    component: AdminLayout, 
-    children: [
       {
-        path: "Marks-Update",
+        path: "mark-updates", 
         name: "MarksUpdate",
         component: MarksUpdate,
+        meta: { requiresAdmin: true },
       },
       {
-        path: "System-Logs",
+        path: "system-logs",
         name: "SystemLogs",
         component: SystemLogs,
+        meta: { requiresAdmin: true },
       },
     ],
   },
-
+  {
+    path: "/:pathMatch(.*)*",
+    redirect: "/",
+  },
 ];
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
 });
+
 
 export default router;

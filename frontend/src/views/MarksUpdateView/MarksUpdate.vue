@@ -1,151 +1,256 @@
 <template>
-  <div class="marks-log-container">
-    <h1 class="title">📊 Mark Update Logs (Admin View)</h1>
+  <div class="mark-updates">
+    <h2>📝 Student Mark Updates</h2>
 
-    <table class="marks-table">
+    <!-- Filters -->
+    <div class="filters">
+      <div class="form-group">
+        <label>Course</label>
+        <select v-model="filters.course_id">
+          <option value="">All Courses</option>
+          <option v-for="course in courses" :key="course.id" :value="course.id">
+            {{ course.course_code }} - {{ course.course_name }}
+          </option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Start Date</label>
+        <input type="date" v-model="filters.start_date" />
+      </div>
+
+      <div class="form-group">
+        <label>End Date</label>
+        <input type="date" v-model="filters.end_date" />
+      </div>
+
+      <button class="btn pretty-btn" @click="fetchMarks">🎯 Apply Filters</button>
+    </div>
+
+    <!-- Marks Table -->
+    <div v-if="message" :class="['alert', messageType]">{{ message }}</div>
+    <table v-if="marks.length" class="marks-table">
       <thead>
         <tr>
-          <th>ID</th>
-          <th>Student ID</th>
-          <th>Assessment ID</th>
+          <th>Timestamp</th>
+          <th>Student</th>
+          <th>Course</th>
+          <th>Assessment</th>
           <th>Marks Obtained</th>
           <th>Remarks</th>
           <th>Graded By</th>
-          <th>Graded At</th>
-          <th>Final</th>
-          <th>Updated At</th>
+          <th>Finalized</th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="log in marksLogs" :key="log.id">
-          <td>{{ log.id }}</td>
-          <td>{{ log.student_id }}</td>
-          <td>{{ log.assessment_component_id }}</td>
-          <td>{{ log.marks_obtained }}</td>
-          <td>{{ log.remarks }}</td>
-          <td>{{ log.graded_by }}</td>
-          <td>{{ log.graded_at }}</td>
-          <td>
-            <span :class="log.is_final ? 'final yes' : 'final no'">
-              {{ log.is_final ? '✅ Final' : '❌ Not Final' }}
-            </span>
-          </td>
-          <td>{{ log.updated_at }}</td>
+        <tr v-for="mark in marks" :key="mark.id">
+          <td>{{ formatDate(mark.graded_at || mark.created_at) }}</td>
+          <td>{{ mark.student_name || 'N/A' }}</td>
+          <td>{{ mark.course_code || 'N/A' }}</td>
+          <td>{{ mark.component_name || 'N/A' }}</td>
+          <td>{{ mark.marks_obtained !== null ? mark.marks_obtained : 'Not Graded' }}</td>
+          <td>{{ mark.remarks || 'N/A' }}</td>
+          <td>{{ mark.grader_name || 'N/A' }}</td>
+          <td>{{ mark.is_final ? 'Yes' : 'No' }}</td>
         </tr>
       </tbody>
     </table>
+    <p v-else>No mark updates found.</p>
+
+    <!-- Pagination -->
+    <div class="pagination" v-if="pagination.total_pages > 1">
+      <button
+        :disabled="pagination.page === 1"
+        @click="fetchMarks(pagination.page - 1)"
+      >
+        Previous
+      </button>
+      <span>Page {{ pagination.page }} of {{ pagination.total_pages }}</span>
+      <button
+        :disabled="pagination.page === pagination.total_pages"
+        @click="fetchMarks(pagination.page + 1)"
+      >
+        Next
+      </button>
+    </div>
   </div>
 </template>
 
 <script>
+import api from '@/api';
+import moment from 'moment';
+
 export default {
   data() {
     return {
-      marksLogs: [],
+      marks: [],
+      courses: [],
+      filters: {
+        course_id: '',
+        start_date: '',
+        end_date: '',
+      },
+      pagination: {
+        page: 1,
+        per_page: 10,
+        total: 0,
+        total_pages: 0,
+      },
+      message: '',
+      messageType: '',
     };
   },
-  mounted() {
-    this.loadMockLogs();
-  },
   methods: {
-    loadMockLogs() {
-      this.marksLogs = [
-        {
-          id: 1,
-          student_id: "S1234",
-          assessment_component_id: "AC001",
-          marks_obtained: 88,
-          remarks: "Good performance",
-          graded_by: "Dr. Alice",
-          graded_at: "2025-06-15 09:30",
-          is_final: true,
-          updated_at: "2025-06-15 10:00",
-        },
-        {
-          id: 2,
-          student_id: "S1235",
-          assessment_component_id: "AC002",
-          marks_obtained: 65,
-          remarks: "Needs improvement",
-          graded_by: "Prof. Mark",
-          graded_at: "2025-06-16 13:15",
-          is_final: false,
-          updated_at: "2025-06-16 13:45",
-        },
-        {
-          id: 3,
-          student_id: "S1236",
-          assessment_component_id: "AC003",
-          marks_obtained: 75,
-          remarks: "Satisfactory",
-          graded_by: "Dr. Emily",
-          graded_at: "2025-06-17 11:00",
-          is_final: true,
-          updated_at: "2025-06-17 11:10",
-        },
-      ];
+    async fetchMarks(page = 1) {
+      try {
+        const params = {
+          page,
+          per_page: this.pagination.per_page,
+          ...this.filters,
+        };
+        const response = await api.get('/admin/mark-updates', { params });
+        this.marks = response.data.data;
+        this.pagination = response.data.pagination;
+        if (!this.marks.length) {
+          this.showMessage('No mark updates found for the selected filters.', 'info');
+        }
+      } catch (error) {
+        console.error('Failed to fetch mark updates:', error);
+        this.showMessage('❌ Failed to fetch mark updates.', 'error');
+      }
     },
+    async fetchCourses() {
+      try {
+        const response = await api.get('/courses');
+        this.courses = response.data;
+      } catch (error) {
+        console.error('Failed to fetch courses:', error);
+        this.showMessage('❌ Failed to fetch courses.', 'error');
+      }
+    },
+    formatDate(date) {
+      return date ? moment(date).format('YYYY-MM-DD HH:mm:ss') : 'N/A';
+    },
+    showMessage(msg, type) {
+      this.message = msg;
+      this.messageType = type;
+      setTimeout(() => {
+        this.message = '';
+        this.messageType = '';
+      }, 3000);
+    },
+  },
+  mounted() {
+    this.fetchCourses();
+    this.fetchMarks();
   },
 };
 </script>
 
 <style scoped>
-.marks-log-container {
-  max-width: 1000px;
-  margin: 40px auto;
-  padding: 20px 25px;
-  background-color: #f9f9f9;
-  border-radius: 12px;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.05);
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+.mark-updates {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-.title {
-  text-align: center;
-  font-size: 2rem;
-  color: #2c3e50;
-  margin-bottom: 25px;
+.filters {
+  display: flex;
+  align-items: center; /* Aligns all items on the same line vertically */
+  gap: 20px; /* Space between filters and button */
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form-group label {
+  font-weight: bold;
+}
+
+.form-group select,
+.form-group input {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.pretty-btn {
+  background: linear-gradient(45deg, #007bff, #00c6ff);
+  color: white;
+  padding: 11px 20px;
+  border: none;
+  border-radius: 24px0px;
+  cursor: pointer;
+  font-weight: bold;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.pretty-btn:hover {
+  background: linear-gradient(45deg, #0056b3, #0099cc);
+  transform: scale(1.05);
 }
 
 .marks-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.95rem;
-}
-
-.marks-table thead {
-  background-color: #3498db;
-  color: #fff;
+  margin-bottom: 20px;
 }
 
 .marks-table th,
 .marks-table td {
-  padding: 12px 15px;
   border: 1px solid #ddd;
-  text-align: center;
+  padding: 10px;
+  text-align: left;
 }
 
-.marks-table tbody tr:nth-child(even) {
-  background-color: #f2f2f2;
+.marks-table th {
+  background: #f4f4f4;
 }
 
-.final {
-  display: inline-block;
-  min-width: 100px;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-weight: bold;
-  font-size: 0.9rem;
-  text-align: center;
+.pagination {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
 }
 
-.final.yes {
-  background-color: #2ecc71;
-  color: white;
+.pagination button {
+  padding: 8px 16px;
+  border: 1px solid #ccc;
+  background: #fff;
+  cursor: pointer;
 }
 
-.final.no {
-  background-color: #e74c3c;
-  color: white;
+.pagination button:disabled {
+  background: #eee;
+  cursor: not-allowed;
+}
+
+.alert {
+  padding: 10px;
+  margin-bottom: 20px;
+  border-radius: 4px;
+}
+
+.alert.success {
+  background: #d4edda;
+  color: #155724;
+}
+
+.alert.error {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.alert.info {
+  background: #d1ecf1;
+  color: #0c5460;
 }
 </style>
