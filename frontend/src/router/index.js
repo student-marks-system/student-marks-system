@@ -6,6 +6,8 @@ import CourseList from "../views/CourseManagementView/CourseList.vue";
 import AssignLecturers from "../views/CourseManagementView/AssignLecturers.vue";
 import MarksUpdate from "../views/MarksUpdateView/MarksUpdate.vue";
 import SystemLogs from "../views/SystemLogsView/SystemLogs.vue";
+import SubmitRemarkRequest from "../views/RemarkRequestView/SubmitRemarkRequest.vue";
+import ReviewRemarkRequest from "../views/RemarkRequestView/ReviewRemarkRequest.vue";
 
 // Layouts
 import LecturerLayout from "../layouts/LecturerLayout.vue"; 
@@ -25,6 +27,16 @@ const routes = [
         path: "",
         name: "CourseList",
         component: CourseList,
+      },
+      {
+        path: "submit-remark",
+        name: "SubmitRemarkRequest",
+        component: SubmitRemarkRequest,
+      },
+      {
+        path: "review-remarks",
+        name: "ReviewRemarkRequest",
+        component: ReviewRemarkRequest,
       },
     ],
   },

@@ -30,5 +30,6 @@ $app->add(function ($request, $handler) {
 (require __DIR__ . '/../routes/users.php')($app);
 
 (require __DIR__ . '/../routes/admin.php')($app);
+(require __DIR__ . '/../routes/remark_requests.php')($app);
 
 $app->run();
