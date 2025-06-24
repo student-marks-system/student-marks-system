@@ -6,52 +6,54 @@ import CourseDetailView from "../views/StudentView/CourseDetailView.vue";
 import PerformanceComparison from "../views/StudentView/PerformanceComparison.vue";
 import PerformanceTrends from "../views/StudentView/PerformanceTrends.vue";
 import WhatIfSimulator from "../views/StudentView/WhatIfSimulator.vue";
+import RemarkRequests from "../views/StudentView/RemarkRequests.vue";
+import StudentNotifications from "../views/StudentView/StudentNotifications.vue";
+import StudentProfile from "../views/StudentView/StudentProfile.vue";
+import StudentSettings from "../views/StudentView/StudentSettings.vue";
+import StudentHelp from "../views/StudentView/StudentHelp.vue";
 
 // Advisor Views
 import AdvisorDashboard from "../views/AdvisorView/AdvisorDashboard.vue";
 import AdviseeProfile from "../views/AdvisorView/AdviseeProfile.vue";
 import AdvisorAdvisees from "../views/AdvisorView/AdvisorAdvisees.vue";
 
+// Lecturer Views
+import LecturerDashboard from "../views/LecturerView/LecturerDashboard.vue";
+import LecturerCourseView from "../views/LecturerView/LecturerCourseView.vue";
+import LecturerStudentsView from "../views/LecturerView/LecturerStudentsView.vue";
+import LecturerAnalyticsView from "../views/LecturerView/LecturerAnalyticsView.vue";
+import CreateComponent from "../views/LecturerView/CreateComponent.vue";
+import LecturerAnalytics from "../views/LecturerView/LecturerAnalytics.vue";
+import LecturerNotifications from "../views/LecturerView/LecturerNotifications.vue";
+import LecturerProfile from "../views/LecturerView/LecturerProfile.vue";
+import LecturerSettings from "../views/LecturerView/LecturerSettings.vue";
+import StudentManagement from "../views/LecturerView/StudentManagement.vue";
+
+// Admin Views
+import AdminPanel from "../views/AdminView/AdminPanel.vue";
+import UserManagement from "../views/AdminView/UserManagement.vue";
+import AdminLayout from "../layouts/AdminLayout.vue";
+
+// Other Views from Wajeeha
+import HomeView from "../views/HomeView.vue";
+import CourseList from "../views/CourseManagementView/CourseList.vue";
+import AssignLecturers from "../views/CourseManagementView/AssignLecturers.vue";
+import MarksUpdate from "../views/MarksUpdateView/MarksUpdate.vue";
+import SystemLogs from "../views/SystemLogsView/SystemLogs.vue";
+import SubmitRemarkRequest from "../views/RemarkRequestView/SubmitRemarkRequest.vue";
+import ReviewRemarkRequest from "../views/RemarkRequestView/ReviewRemarkRequest.vue";
+import EnrollmentPanel from "../views/EnrollmentView/EnrollmentPanel.vue";
+
 // Layouts
 import StudentLayout from "../layouts/StudentLayout.vue";
 import AdvisorLayout from "../layouts/AdvisorLayout.vue";
-import LecturerLayout from "@/layouts/LecturerLayout.vue";
+import LecturerLayout from "../layouts/LecturerLayout.vue";
 
 // Auth service for route guards
 import authService from "@/services/auth";
 
 // Import views
 import Login from "@/views/LoginPage.vue";
-import LecturerDashboard from "@/views/LecturerView/LecturerDashboard.vue";
-
-// Additional routes from Tabinda branch (if not already present)
-const extraRoutes = [
-  {
-    path: "/admin",
-    name: "AdminPanel",
-    component: () => import("../views/AdminView/AdminPanel.vue"),
-  },
-  {
-    path: "/lecturer",
-    name: "LecturerPanel",
-    component: () => import("../views/LecturerView/LecturerPanel.vue"),
-  },
-  {
-    path: "/enrollment",
-    name: "EnrollmentPanel",
-    component: () => import("../views/EnrollmentView/EnrollmentPanel.vue"),
-  },
-  {
-    path: "/marks",
-    name: "MarksPanel",
-    component: () => import("../views/MarksView/MarksPanel.vue"),
-  },
-  {
-    path: "/notification",
-    name: "NotificationPanel",
-    component: () => import("../views/NotificationView/NotificationPanel.vue"),
-  },
-];
 
 const routes = [
   {
@@ -66,6 +68,7 @@ const routes = [
       guestOnly: true,
     },
   },
+  // Student routes
   {
     path: "/student",
     component: StudentLayout,
@@ -74,103 +77,89 @@ const routes = [
       roles: ["student"],
     },
     children: [
-      {
-        path: "",
-        redirect: "/student/dashboard",
-      },
+      { path: "", redirect: "/student/dashboard" },
       {
         path: "dashboard",
         name: "StudentDashboard",
         component: StudentDashboard,
-        meta: {
-          requiresAuth: true,
-          roles: ["student"],
-        },
+        meta: { requiresAuth: true, roles: ["student"] },
       },
       {
         path: "course/:courseId?",
         name: "CourseDetailView",
         component: CourseDetailView,
-        meta: {
-          requiresAuth: true,
-          roles: ["student"],
-        },
+        meta: { requiresAuth: true, roles: ["student"] },
       },
       {
         path: "performance-comparison",
         name: "PerformanceComparison",
         component: PerformanceComparison,
-        meta: {
-          requiresAuth: true,
-          roles: ["student"],
-        },
+        meta: { requiresAuth: true, roles: ["student"] },
       },
       {
         path: "performance-trends",
         name: "PerformanceTrends",
         component: PerformanceTrends,
-        meta: {
-          requiresAuth: true,
-          roles: ["student"],
-        },
+        meta: { requiresAuth: true, roles: ["student"] },
       },
       {
         path: "what-if-simulator",
         name: "WhatIfSimulator",
         component: WhatIfSimulator,
-        meta: {
-          requiresAuth: true,
-          roles: ["student"],
-        },
+        meta: { requiresAuth: true, roles: ["student"] },
       },
       {
         path: "remark-requests",
         name: "RemarkRequests",
-        component: () => import("../views/StudentView/RemarkRequests.vue"),
-        meta: {
-          requiresAuth: true,
-          roles: ["student"],
-        },
+        component: RemarkRequests,
+        meta: { requiresAuth: true, roles: ["student"] },
       },
       {
         path: "notifications",
         name: "StudentNotifications",
-        component: () =>
-          import("../views/StudentView/StudentNotifications.vue"),
-        meta: {
-          requiresAuth: true,
-          roles: ["student"],
-        },
+        component: StudentNotifications,
+        meta: { requiresAuth: true, roles: ["student"] },
       },
       {
         path: "profile",
         name: "StudentProfile",
-        component: () => import("../views/StudentView/StudentProfile.vue"),
-        meta: {
-          requiresAuth: true,
-          roles: ["student"],
-        },
+        component: StudentProfile,
+        meta: { requiresAuth: true, roles: ["student"] },
       },
       {
         path: "settings",
         name: "StudentSettings",
-        component: () => import("../views/StudentView/StudentSettings.vue"),
-        meta: {
-          requiresAuth: true,
-          roles: ["student"],
-        },
+        component: StudentSettings,
+        meta: { requiresAuth: true, roles: ["student"] },
       },
       {
         path: "help",
         name: "StudentHelp",
-        component: () => import("../views/StudentView/StudentHelp.vue"),
-        meta: {
-          requiresAuth: true,
-          roles: ["student"],
-        },
+        component: StudentHelp,
+        meta: { requiresAuth: true, roles: ["student"] },
+      },
+      // Wajeeha's new student views
+      {
+        path: "marks-update",
+        name: "MarksUpdate",
+        component: MarksUpdate,
+        meta: { requiresAuth: true, roles: ["student"] },
+      },
+      {
+        path: "submit-remark-request",
+        name: "SubmitRemarkRequest",
+        component: SubmitRemarkRequest,
+        meta: { requiresAuth: true, roles: ["student"] },
+      },
+      {
+        path: "review-remark-request",
+        name: "ReviewRemarkRequest",
+        component: ReviewRemarkRequest,
+        meta: { requiresAuth: true, roles: ["student"] },
       },
     ],
   },
+  // Lecturer routes
   {
     path: "/lecturer",
     component: LecturerLayout,
@@ -179,96 +168,71 @@ const routes = [
       roles: ["lecturer"],
     },
     children: [
-      {
-        path: "",
-        redirect: "/lecturer/dashboard",
-      },
+      { path: "", redirect: "/lecturer/dashboard" },
       {
         path: "dashboard",
         name: "LecturerDashboard",
         component: LecturerDashboard,
-        meta: {
-          requiresAuth: true,
-          roles: ["lecturer"],
-        },
+        meta: { requiresAuth: true, roles: ["lecturer"] },
       },
       {
         path: "course/:courseId",
         name: "LecturerCourseView",
-        component: () => import("../views/LecturerView/LecturerCourseView.vue"),
-        meta: {
-          requiresAuth: true,
-          roles: ["lecturer"],
-        },
+        component: LecturerCourseView,
+        meta: { requiresAuth: true, roles: ["lecturer"] },
       },
       {
         path: "course/:courseId/students",
         name: "LecturerStudentsView",
-        component: () =>
-          import("../views/LecturerView/LecturerStudentsView.vue"),
-        meta: {
-          requiresAuth: true,
-          roles: ["lecturer"],
-        },
+        component: LecturerStudentsView,
+        meta: { requiresAuth: true, roles: ["lecturer"] },
       },
       {
         path: "course/:courseId/analytics",
         name: "LecturerAnalyticsView",
-        component: () =>
-          import("../views/LecturerView/LecturerAnalyticsView.vue"),
-        meta: {
-          requiresAuth: true,
-          roles: ["lecturer"],
-        },
+        component: LecturerAnalyticsView,
+        meta: { requiresAuth: true, roles: ["lecturer"] },
       },
       {
         path: "components/new",
         name: "CreateComponent",
-        component: () => import("../views/LecturerView/CreateComponent.vue"),
-        meta: {
-          requiresAuth: true,
-          roles: ["lecturer"],
-        },
+        component: CreateComponent,
+        meta: { requiresAuth: true, roles: ["lecturer"] },
       },
       {
         path: "analytics",
         name: "LecturerAnalytics",
-        component: () => import("../views/LecturerView/LecturerAnalytics.vue"),
-        meta: {
-          requiresAuth: true,
-          roles: ["lecturer"],
-        },
+        component: LecturerAnalytics,
+        meta: { requiresAuth: true, roles: ["lecturer"] },
       },
       {
         path: "notifications",
         name: "LecturerNotifications",
-        component: () =>
-          import("../views/LecturerView/LecturerNotifications.vue"),
-        meta: {
-          requiresAuth: true,
-          roles: ["lecturer"],
-        },
+        component: LecturerNotifications,
+        meta: { requiresAuth: true, roles: ["lecturer"] },
       },
       {
         path: "profile",
         name: "LecturerProfile",
-        component: () => import("../views/LecturerView/LecturerProfile.vue"),
-        meta: {
-          requiresAuth: true,
-          roles: ["lecturer"],
-        },
+        component: LecturerProfile,
+        meta: { requiresAuth: true, roles: ["lecturer"] },
       },
       {
         path: "settings",
         name: "LecturerSettings",
-        component: () => import("../views/LecturerView/LecturerSettings.vue"),
-        meta: {
-          requiresAuth: true,
-          roles: ["lecturer"],
-        },
+        component: LecturerSettings,
+        meta: { requiresAuth: true, roles: ["lecturer"] },
+      },
+      // Wajeeha's new lecturer views
+      {
+        path: "student-management",
+        name: "StudentManagement",
+        component: StudentManagement,
+        meta: { requiresAuth: true, roles: ["lecturer"] },
       },
     ],
   },
+  // Advisor routes
   {
     path: "/advisor",
     component: AdvisorLayout,
@@ -277,49 +241,77 @@ const routes = [
       roles: ["advisor"],
     },
     children: [
-      {
-        path: "",
-        redirect: "/advisor/dashboard",
-      },
+      { path: "", redirect: "/advisor/dashboard" },
       {
         path: "dashboard",
         name: "AdvisorDashboard",
         component: AdvisorDashboard,
-        meta: {
-          requiresAuth: true,
-          roles: ["advisor"],
-        },
+        meta: { requiresAuth: true, roles: ["advisor"] },
       },
       {
         path: "advisees",
         name: "AdvisorAdvisees",
         component: AdvisorAdvisees,
-        meta: {
-          requiresAuth: true,
-          roles: ["advisor"],
-        },
+        meta: { requiresAuth: true, roles: ["advisor"] },
       },
       {
         path: "advisee/:studentId?",
         name: "AdviseeProfile",
         component: AdviseeProfile,
-        meta: {
-          requiresAuth: true,
-          roles: ["advisor"],
-        },
+        meta: { requiresAuth: true, roles: ["advisor"] },
       },
     ],
   },
-  // Placeholder routes for admin
+  // Admin routes
   {
     path: "/admin",
-    redirect: "/login",
+    component: AdminLayout,
+    meta: {
+      requiresAuth: true,
+      roles: ["admin"],
+    },
+    children: [
+      { path: "", redirect: "/admin/dashboard" },
+      {
+        path: "dashboard",
+        name: "AdminDashboard",
+        component: AdminPanel,
+        meta: { requiresAuth: true, roles: ["admin"] },
+      },
+      {
+        path: "users",
+        name: "UserManagement",
+        component: UserManagement,
+        meta: { requiresAuth: true, roles: ["admin"] },
+      },
+      {
+        path: "courses",
+        name: "CourseList",
+        component: CourseList,
+        meta: { requiresAuth: true, roles: ["admin"] },
+      },
+      {
+        path: "assign-lecturers",
+        name: "AssignLecturers",
+        component: AssignLecturers,
+        meta: { requiresAuth: true, roles: ["admin"] },
+      },
+      {
+        path: "system-logs",
+        name: "SystemLogs",
+        component: SystemLogs,
+        meta: { requiresAuth: true, roles: ["admin"] },
+      },
+      {
+        path: "enrollments",
+        name: "EnrollmentPanel",
+        component: EnrollmentPanel,
+        meta: { requiresAuth: true, roles: ["admin"] },
+      },
+    ],
   },
-  {
-    path: "/admin/dashboard",
-    redirect: "/login",
-  },
-  ...extraRoutes, // Add any extra routes from Tabinda branch
+  // Home route (if needed)
+  { path: "/home", name: "HomeView", component: HomeView },
 ];
 
 const router = createRouter({
@@ -345,7 +337,7 @@ router.beforeEach((to, from, next) => {
       student: "/student/dashboard",
       advisor: "/advisor/dashboard",
       lecturer: "/lecturer/dashboard",
-      admin: "/login", // Redirect to login until admin dashboard is created
+      admin: "/admin/dashboard",
     };
     next(dashboardRoutes[userRole] || "/login");
     return;
@@ -376,6 +368,16 @@ router.afterEach((to) => {
     StudentProfile: "My Profile - Student Marks System",
     StudentSettings: "Settings - Student Marks System",
     StudentHelp: "Help & Support - Student Marks System",
+    // Add new page titles as needed
+    MarksUpdate: "Marks Update - Student Marks System",
+    SubmitRemarkRequest: "Submit Remark Request - Student Marks System",
+    ReviewRemarkRequest: "Review Remark Request - Student Marks System",
+    AdminPanel: "Admin Panel - Student Marks System",
+    CourseList: "Course List - Student Marks System",
+    AssignLecturers: "Assign Lecturers - Student Marks System",
+    SystemLogs: "System Logs - Student Marks System",
+    EnrollmentPanel: "Enrollment Panel - Student Marks System",
+    HomeView: "Home - Student Marks System",
   };
 
   document.title = pageTitles[to.name] || "Student Marks System";

@@ -3,7 +3,7 @@ namespace App\Controllers;
 
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
-use Illuminate\Database\Capsule\Manager as Capsule;
+use App\Database\Database;
 
 class StudentComponentController
 {
@@ -13,22 +13,14 @@ class StudentComponentController
      */
     public function index(Request $request, Response $response): Response
     {
-        // Fetch students
-        $students = Capsule::table('users')
-            ->where('user_type', 'student')
-            ->select(['id', 'full_name'])
-            ->get();
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare("SELECT id, full_name FROM users WHERE user_type = 'student'");
+        $stmt->execute();
+        $students = $stmt->fetchAll();
 
-        // Fetch assessment components with course details
-        $components = Capsule::table('assessment_components')
-            ->join('courses', 'courses.id', '=', 'assessment_components.course_id')
-            ->select([
-                'assessment_components.id',
-                'assessment_components.component_name',
-                'courses.course_code',
-                'courses.course_name'
-            ])
-            ->get();
+        $stmt2 = $db->prepare("SELECT assessment_components.id, assessment_components.component_name, courses.course_code, courses.course_name FROM assessment_components JOIN courses ON courses.id = assessment_components.course_id");
+        $stmt2->execute();
+        $components = $stmt2->fetchAll();
 
         $data = [
             'students' => $students,

@@ -222,7 +222,11 @@ export default {
     },
 
     requestRemark(assessmentId) {
-      this.$router.push(`/remark-request/${assessmentId}`);
+      // Navigate to the RemarkRequests view, optionally with assessmentId as a query
+      this.$router.push({
+        path: '/student/remark-requests',
+        query: assessmentId ? { assessmentId } : undefined
+      });
     },
 
     viewAssessmentDetails(assessmentId) {

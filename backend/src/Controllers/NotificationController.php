@@ -3,7 +3,7 @@ namespace App\Controllers;
 
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
-use Illuminate\Database\Capsule\Manager as Capsule;
+use App\Database\Database;
 
 class NotificationController
 {
@@ -18,10 +18,10 @@ class NotificationController
             return $response->withStatus(400)->withHeader('Content-Type', 'application/json');
         }
 
-        $notifications = Capsule::table('notifications')
-            ->where('user_id', $userId)
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare("SELECT * FROM notifications WHERE user_id = :user_id ORDER BY created_at DESC");
+        $stmt->execute(['user_id' => $userId]);
+        $notifications = $stmt->fetchAll();
 
         $response->getBody()->write(json_encode($notifications));
         return $response->withStatus(200)->withHeader('Content-Type', 'application/json');
@@ -45,19 +45,18 @@ class NotificationController
             return $response->withStatus(400)->withHeader('Content-Type', 'application/json');
         }
 
-        $notification = Capsule::table('notifications')
-            ->where('id', $id)
-            ->where('user_id', $userId)
-            ->first();
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare("SELECT * FROM notifications WHERE id = :id AND user_id = :user_id");
+        $stmt->execute(['id' => $id, 'user_id' => $userId]);
+        $notification = $stmt->fetch();
 
         if (!$notification) {
             $response->getBody()->write(json_encode(['error' => 'Notification not found or unauthorized']));
             return $response->withStatus(404)->withHeader('Content-Type', 'application/json');
         }
 
-        Capsule::table('notifications')
-            ->where('id', $id)
-            ->delete();
+        $stmt = $db->prepare("DELETE FROM notifications WHERE id = :id");
+        $stmt->execute(['id' => $id]);
 
         $response->getBody()->write(json_encode(['status' => 'deleted']));
         return $response->withStatus(200)->withHeader('Content-Type', 'application/json');

@@ -2,7 +2,7 @@
 use Slim\App;
 use App\Controllers\EnrollmentController;
 
-return function (App $app) {
+return function ($app) {
     // List all OR by course
     $app->get('/course_enrollments', [EnrollmentController::class, 'index']);
     $app->get('/course_enrollments/course/{course_id}', [EnrollmentController::class, 'index']);

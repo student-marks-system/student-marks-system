@@ -152,10 +152,7 @@ class AuthController extends BaseController
         }
     }
 
-    /**
-     * Get user profile endpoint
-     * GET /api/user/profile
-     */
+   
     /**
  * Get user profile endpoint
  * GET /api/user/profile

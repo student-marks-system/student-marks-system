@@ -118,7 +118,6 @@ export default {
         // Now load the rest of the data that depends on studentInfo.id
         await Promise.all([
           this.loadAcademicStats(),
-          this.loadCourses(),
           this.loadRecentActivities(),
         ]);
       } catch (error) {
@@ -141,10 +140,10 @@ export default {
           const userData = response.data;
           console.log("User data:", userData);
 
-          if (userData.role === "student") {
+          const isStudent = userData.role === "student" || userData.user_type === "student";
+          if (isStudent) {
             console.log("Fetching student breakdown for user ID:", userData.id);
-            const studentResponse =
-              await studentPerformanceAPI.getStudentFullBreakdown(userData.id);
+            const studentResponse = await studentPerformanceAPI.getStudentFullBreakdown(userData.id);
             console.log("Student breakdown response:", studentResponse);
 
             if (studentResponse.success) {
@@ -153,16 +152,14 @@ export default {
               this.studentInfo = {
                 id: userData.id,
                 name: studentData.name || userData.full_name || "Student Name",
-                matricNumber:
-                  studentData.matric_number ||
-                  userData.username ||
-                  "Loading...",
+                matricNumber: studentData.matric_number || userData.username || "Loading...",
                 currentSemester: studentData.current_semester || "2024/2025-1",
                 email: studentData.email || userData.email || "",
                 department: studentData.department || "Computer Science",
                 program: studentData.program || "Bachelor of Computer Science",
               };
               console.log("Updated studentInfo:", this.studentInfo);
+              await this.loadCourses();
             } else {
               console.log("Student breakdown failed:", studentResponse);
               // Fallback to user profile data
@@ -175,6 +172,7 @@ export default {
                 department: "Computer Science",
                 program: "Bachelor of Computer Science",
               };
+              await this.loadCourses();
             }
           }
         } else {
@@ -220,14 +218,14 @@ export default {
 
     async loadCourses() {
       this.loadingCourses = true;
-
       try {
-        if (!this.studentInfo.id) return;
-
-        const response = await studentPerformanceAPI.getStudentFullBreakdown(
-          this.studentInfo.id
-        );
-
+        console.log('In loadCourses, studentInfo.id:', this.studentInfo.id);
+        if (!this.studentInfo.id) {
+          console.warn('No student ID, skipping course load');
+          return;
+        }
+        const response = await studentPerformanceAPI.getStudentFullBreakdown(this.studentInfo.id);
+        console.log('Course breakdown response:', response);
         if (response.success) {
           const coursesData = response.data.courses || [];
 

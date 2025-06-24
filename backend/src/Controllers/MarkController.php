@@ -3,7 +3,7 @@ namespace App\Controllers;
 
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
-use Illuminate\Database\Capsule\Manager as Capsule;
+use App\Database\Database;
 
 class MarkController
 {
@@ -33,10 +33,10 @@ class MarkController
         }
 
         // Validate student (must exist and be a student)
-        $student = Capsule::table('users')
-            ->where('id', $studentId)
-            ->where('user_type', 'student')
-            ->first();
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare("SELECT * FROM users WHERE id = :id AND user_type = 'student'");
+        $stmt->execute(['id' => $studentId]);
+        $student = $stmt->fetch();
 
         if (!$student) {
             $error = 'Invalid or non-student user';
@@ -46,9 +46,9 @@ class MarkController
         }
 
         // Validate assessment component
-        $component = Capsule::table('assessment_components')
-            ->where('id', $assessmentComponentId)
-            ->first();
+        $stmt = $db->prepare("SELECT * FROM assessment_components WHERE id = :id");
+        $stmt->execute(['id' => $assessmentComponentId]);
+        $component = $stmt->fetch();
 
         if (!$component) {
             $error = 'Invalid assessment component';
@@ -58,27 +58,27 @@ class MarkController
         }
 
         // Check if mark exists
-        $existingMark = Capsule::table('student_marks')
-            ->where('student_id', $studentId)
-            ->where('assessment_component_id', $assessmentComponentId)
-            ->first();
+        $stmt = $db->prepare("SELECT * FROM student_marks WHERE student_id = :student_id AND assessment_component_id = :assessment_component_id");
+        $stmt->execute(['student_id' => $studentId, 'assessment_component_id' => $assessmentComponentId]);
+        $existingMark = $stmt->fetch();
 
         $now = date('Y-m-d H:i:s');
 
         if ($existingMark) {
             // Update existing mark
-            Capsule::table('student_marks')
-                ->where('id', $existingMark->id)
-                ->update([
-                    'marks_obtained' => $marksObtained,
-                    'remarks' => $remarks,
-                    'graded_at' => $now,
-                    'is_final' => $isFinal,
-                    'updated_at' => $now,
-                ]);
+            $stmt = $db->prepare("UPDATE student_marks SET marks_obtained = :marks_obtained, remarks = :remarks, graded_at = :graded_at, is_final = :is_final, updated_at = :updated_at WHERE id = :id");
+            $stmt->execute([
+                'marks_obtained' => $marksObtained,
+                'remarks' => $remarks,
+                'graded_at' => $now,
+                'is_final' => $isFinal,
+                'updated_at' => $now,
+                'id' => $existingMark['id'],
+            ]);
         } else {
             // Insert new mark
-            Capsule::table('student_marks')->insert([
+            $stmt = $db->prepare("INSERT INTO student_marks (student_id, assessment_component_id, marks_obtained, remarks, graded_at, is_final, created_at, updated_at) VALUES (:student_id, :assessment_component_id, :marks_obtained, :remarks, :graded_at, :is_final, :created_at, :updated_at)");
+            $stmt->execute([
                 'student_id' => $studentId,
                 'assessment_component_id' => $assessmentComponentId,
                 'marks_obtained' => $marksObtained,
@@ -91,14 +91,15 @@ class MarkController
         }
 
         // Create notification
-        $course = Capsule::table('courses')
-            ->where('id', $component->course_id)
-            ->first();
+        $stmt = $db->prepare("SELECT * FROM courses WHERE id = :id");
+        $stmt->execute(['id' => $component['course_id']]);
+        $course = $stmt->fetch();
 
-        Capsule::table('notifications')->insert([
+        $stmt = $db->prepare("INSERT INTO notifications (user_id, title, message, type, is_read, created_at) VALUES (:user_id, :title, :message, :type, :is_read, :created_at)");
+        $stmt->execute([
             'user_id' => $studentId,
-            'title' => "Mark Updated for {$course->course_code}",
-            'message' => "Your marks for {$component->component_name} in {$course->course_name} have been updated to {$marksObtained}.",
+            'title' => "Mark Updated for {$course['course_code']}",
+            'message' => "Your marks for {$component['component_name']} in {$course['course_name']} have been updated to {$marksObtained}.",
             'type' => 'mark_update',
             'is_read' => false,
             'created_at' => $now,

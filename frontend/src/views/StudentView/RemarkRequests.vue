@@ -151,6 +151,7 @@
 
 <script>
 import { studentPerformanceAPI } from "@/services/api";
+import authService from "@/services/auth";
 
 export default {
   name: "RemarkRequests",
@@ -202,110 +203,95 @@ export default {
     },
 
     async loadEnrolledCourses() {
-      // This would typically come from the student's enrolled courses
-      // For now, using mock data
-      this.enrolledCourses = [
-        {
-          id: 1,
-          course_code: "CS101",
-          course_name: "Introduction to Computer Science",
-        },
-        { id: 2, course_code: "MATH101", course_name: "Calculus I" },
-        { id: 3, course_code: "ENG101", course_name: "English Composition" },
-      ];
+      try {
+        const studentId = authService.getCurrentUserId();
+        if (!studentId) throw new Error('No student ID');
+        const response = await studentPerformanceAPI.getStudentFullBreakdown(studentId);
+        if (response.success) {
+          this.enrolledCourses = (response.data.courses || []).map(course => ({
+            id: course.course_id,
+            course_code: course.course_code,
+            course_name: course.course_name
+          }));
+        } else {
+          this.enrolledCourses = [];
+        }
+      } catch (error) {
+        console.error('Error loading enrolled courses:', error);
+        this.enrolledCourses = [];
+      }
     },
 
     async loadCourseComponents(courseId) {
       try {
-        const response = await studentPerformanceAPI.getClassAverages(courseId);
+        const studentId = authService.getCurrentUserId();
+        if (!studentId) throw new Error('No student ID');
+        const response = await studentPerformanceAPI.getStudentCourseMarks(studentId, courseId);
         if (response.success) {
-          this.courseComponents = response.data.components || [];
+          this.courseComponents = (response.data.components || []).map(c => ({
+            ...c,
+            id: c.id || c.component_id,
+          }));
+          console.log('Loaded courseComponents:', this.courseComponents);
+        } else {
+          this.courseComponents = [];
         }
       } catch (error) {
-        console.error("Error loading components:", error);
+        console.error('Error loading components:', error);
         this.courseComponents = [];
       }
     },
 
     async loadRequests() {
       try {
-        // This would typically come from the API
-        // For now, using mock data
-        this.requests = [
-          {
-            id: 1,
-            course_code: "CS101",
-            component_name: "Midterm Exam",
-            status: "pending",
-            reason:
-              "I believe there was an error in the grading of question 3.",
-            evidence: "I have my original work showing the correct approach.",
-            created_at: "2024-01-15T10:30:00Z",
-            lecturer_response: null,
-            updated_marks: null,
-            max_marks: 100,
-          },
-          {
-            id: 2,
-            course_code: "MATH101",
-            component_name: "Assignment 2",
-            status: "approved",
-            reason:
-              "The grader missed awarding points for the correct solution method.",
-            evidence: "",
-            created_at: "2024-01-10T14:20:00Z",
-            lecturer_response:
-              "Your request has been approved. The marks have been updated.",
-            updated_marks: 85,
-            max_marks: 100,
-          },
-        ];
+        const studentId = authService.getCurrentUserId();
+        if (!studentId) throw new Error('No student ID');
+        const response = await studentPerformanceAPI.getRemarkRequests(studentId);
+        if (response.success) {
+          this.requests = response.data.requests || [];
+        } else {
+          this.requests = [];
+        }
       } catch (error) {
-        console.error("Error loading requests:", error);
+        console.error('Error loading requests:', error);
         this.requests = [];
       }
     },
 
     async submitRequest() {
       if (!this.isFormValid) return;
-
       try {
+        const studentId = authService.getCurrentUserId();
+        if (!studentId) throw new Error('No student ID');
+        const selectedComponentObj = this.courseComponents.find(
+          c => c.id == this.selectedComponent
+        );
+        // Always send a number, never undefined/null
+        const originalMarks = Number.isFinite(selectedComponentObj?.marks_obtained)
+          ? selectedComponentObj.marks_obtained
+          : 0;
         const requestData = {
-          course_id: this.selectedCourse,
-          component_id: this.selectedComponent,
           reason: this.requestReason,
           evidence: this.supportingEvidence,
+          original_marks: originalMarks,
+          component_id: this.selectedComponent
         };
-
-        // This would typically call the API
-        console.log("Submitting request:", requestData);
-
-        // For now, just add to the list
-        const newRequest = {
-          id: Date.now(),
-          course_code: this.enrolledCourses.find(
-            (c) => c.id == this.selectedCourse
-          )?.course_code,
-          component_name: this.courseComponents.find(
-            (c) => c.id == this.selectedComponent
-          )?.component_name,
-          status: "pending",
-          reason: this.requestReason,
-          evidence: this.supportingEvidence,
-          created_at: new Date().toISOString(),
-          lecturer_response: null,
-          updated_marks: null,
-          max_marks: 100,
-        };
-
-        this.requests.unshift(newRequest);
-        this.resetForm();
-
-        // Show success message
-        alert("Remark request submitted successfully!");
+        console.log('Submitting remark request:', requestData);
+        const response = await studentPerformanceAPI.submitRemarkRequest(
+          studentId,
+          this.selectedCourse,
+          requestData
+        );
+        if (response.success) {
+          await this.loadRequests();
+          this.resetForm();
+          alert('Remark request submitted successfully!');
+        } else {
+          alert(response.message || 'Failed to submit request.');
+        }
       } catch (error) {
-        console.error("Error submitting request:", error);
-        alert("Failed to submit request. Please try again.");
+        console.error('Error submitting request:', error);
+        alert('Failed to submit request. Please try again.');
       }
     },
 

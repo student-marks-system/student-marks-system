@@ -12,10 +12,6 @@
             <span class="btn-icon">➕</span>
             Add Assessment
           </button>
-          <button class="action-btn secondary" @click="exportAllMarks">
-            <span class="btn-icon">📊</span>
-            Export Marks
-          </button>
         </div>
       </div>
     </div>
@@ -142,6 +138,18 @@
       </div>
     </div>
 
+    <!-- Assessment Components Section -->
+    <div class="assessment-section">
+      <h2>Manage Assessment Components</h2>
+      <label for="course-select">Select Course:</label>
+      <select id="course-select" v-model="selectedCourseId">
+        <option v-for="course in courses" :key="course.course_id" :value="course.course_id">
+          {{ course.course_code }} - {{ course.course_name }}
+        </option>
+      </select>
+      <AssessmentComponentPanel v-if="selectedCourseId" :course-id="selectedCourseId" :lecturer-id="lecturerId" />
+    </div>
+
     <!-- Recent Activities -->
     <div class="recent-activities">
       <div class="section-header">
@@ -191,9 +199,11 @@
 
 <script>
 import { lecturerAPI, utilityAPI } from "@/services/api";
+import AssessmentComponentPanel from "@/views/LecturerView/AssessmentComponentPanel.vue";
 
 export default {
   name: "LecturerDashboard",
+  components: { AssessmentComponentPanel },
   data() {
     return {
       loading: false,
@@ -201,6 +211,7 @@ export default {
       lecturerName: "Lecturer",
       lecturerId: null,
       courses: [],
+      selectedCourseId: null,
       overview: {
         total_courses: 0,
         total_students: 0,
@@ -220,6 +231,9 @@ export default {
   },
   async mounted() {
     await this.loadDashboardData();
+    if (this.courses.length > 0) {
+      this.selectedCourseId = this.courses[0].course_id;
+    }
   },
   methods: {
     async loadDashboardData() {
@@ -229,22 +243,27 @@ export default {
       try {
         // Get user profile
         const userResponse = await utilityAPI.getUserProfile();
+        console.log('User profile response:', userResponse);
         if (userResponse.success) {
           this.lecturerName = userResponse.data.full_name;
           this.lecturerId = userResponse.data.id;
+          console.log('Lecturer ID set to:', this.lecturerId);
+        } else {
+          throw new Error("Failed to load user profile");
         }
 
-        // Load dashboard data
-        const dashboardResponse = await lecturerAPI.getDashboard(
-          this.lecturerId
-        );
-        if (dashboardResponse.success) {
-          const data = dashboardResponse.data;
-          this.courses = data.courses || [];
-          this.overview = data.overview || {};
-          this.recentActivities = data.recent_activities || [];
+        // Only fetch courses if lecturerId is set
+        if (this.lecturerId) {
+          console.log("Fetching courses for lecturerId:", this.lecturerId);
+          const coursesResponse = await lecturerAPI.getCourses(this.lecturerId);
+          if (coursesResponse.success) {
+            this.courses = coursesResponse.data.courses || coursesResponse.data || [];
+          } else {
+            this.courses = [];
+          }
         } else {
-          this.error = "Failed to load dashboard data";
+          this.error = "Lecturer ID not found.";
+          console.error("Lecturer ID is null or undefined.");
         }
       } catch (error) {
         console.error("Error loading dashboard:", error);
@@ -268,7 +287,7 @@ export default {
 
     async exportCourseMarks(courseId) {
       try {
-        const response = await lecturerAPI.exportMarks(courseId);
+        const response = await lecturerAPI.exportMarks(this.lecturerId, courseId);
         if (response.success) {
           // Create download link
           const blob = new Blob([response.data], { type: "text/csv" });
@@ -284,13 +303,6 @@ export default {
       } catch (error) {
         console.error("Error exporting marks:", error);
         alert("Failed to export marks");
-      }
-    },
-
-    async exportAllMarks() {
-      // Export marks for all courses
-      for (const course of this.courses) {
-        await this.exportCourseMarks(course.course_id);
       }
     },
 
@@ -385,16 +397,6 @@ export default {
   background: rgba(255, 255, 255, 0.3);
 }
 
-.action-btn.secondary {
-  background: transparent;
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-.action-btn.secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
 .btn-icon {
   margin-right: 8px;
   font-size: 1.1rem;
@@ -479,22 +481,20 @@ export default {
 }
 
 .courses-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
 }
 
 .course-card {
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 24px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.course-card:hover {
-  border-color: #3b82f6;
-  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.1);
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  padding: 1.5rem;
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .course-header {
@@ -602,20 +602,23 @@ export default {
 
 .course-actions {
   display: flex;
-  gap: 8px;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  justify-content: flex-end;
 }
 
 .action-btn.small {
-  flex: 1;
-  padding: 8px 12px;
-  font-size: 0.8rem;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  color: #374151;
+  font-size: 0.95rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 5px;
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  color: #333;
+  transition: background 0.2s;
 }
-
 .action-btn.small:hover {
-  background: #e2e8f0;
+  background: #e0e7ff;
+  color: #1d4ed8;
 }
 
 /* Recent Activities */

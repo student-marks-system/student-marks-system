@@ -1,92 +1,92 @@
 <template>
-  <div class="user-management">
-    <h2>👥 Manage User Accounts</h2>
+  <div class="admin-dashboard">
+    <h2>🎓 Admin Dashboard</h2>
 
-    <!-- Alert Message -->
-    <div v-if="message" :class="['alert', messageType]">{{ message }}</div>
-
-    <!-- Add / Edit Form -->
-    <form @submit.prevent="submitForm" class="form-card">
-      <div class="form-row">
-        <div class="form-group">
-          <label>Username</label>
-          <input v-model="form.username" required />
-        </div>
-        <div class="form-group">
-          <label>Email</label>
-          <input v-model="form.email" type="email" required />
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label>Role</label>
-          <select v-model="form.user_type" required>
-            <option value="admin">Admin</option>
-            <option value="lecturer">Lecturer</option>
-            <option value="student">Student</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Status</label>
-          <select v-model="form.is_active" required>
-            <option :value="true">Active</option>
-            <option :value="false">Inactive</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="form-actions">
-        <button type="submit" class="btn primary">
-          {{ editId ? "Update" : "Add" }} User
-        </button>
-        <button
-          type="button"
-          class="btn secondary"
-          v-if="editId"
-          @click="resetForm"
-        >
-          Cancel
-        </button>
-      </div>
-    </form>
-
-    <!-- User List -->
-    <ul class="user-list">
-      <li v-for="user in users" :key="user.id" class="user-card">
-        <div class="user-details">
-          <div class="user-name">{{ user.username }}</div>
-          <div class="user-email">{{ user.email }}</div>
-          <div class="user-tags">
-            <span class="tag role">{{ user.user_type }}</span>
-            <span :class="['tag', user.is_active ? 'active' : 'inactive']">
-              {{ user.is_active ? "Active" : "Inactive" }}
-            </span>
+    <!-- Overview Cards -->
+    <div class="overview-cards">
+      <div class="card">
+        <div class="card-icon">👥</div>
+        <div class="card-content">
+          <h3>Total Users</h3>
+          <div class="card-value">{{ stats.totalUsers }}</div>
+          <div class="card-breakdown">
+            <span>Students: {{ stats.studentCount }}</span>
+            <span>Lecturers: {{ stats.lecturerCount }}</span>
           </div>
         </div>
-        <div class="user-actions">
-          <button @click="editUser(user)" class="btn small edit">✏</button>
-          <button @click="confirmDelete(user)" class="btn small delete">
-            🗑
-          </button>
-        </div>
-      </li>
-    </ul>
+      </div>
 
-    <!-- Delete Modal -->
-    <div v-if="showModal" class="modal-overlay">
-      <div class="modal">
-        <h3>⚠ Confirm Deletion</h3>
-        <p>
-          Are you sure you want to delete
-          <strong>{{ toDelete.username }}</strong
-          >?
-        </p>
-        <div class="modal-actions">
-          <button @click="deleteUserConfirmed" class="btn delete">
-            Yes, Delete
-          </button>
-          <button @click="cancelDelete" class="btn secondary">Cancel</button>
+      <div class="card">
+        <div class="card-icon">📚</div>
+        <div class="card-content">
+          <h3>Active Courses</h3>
+          <div class="card-value">{{ stats.activeCourses }}</div>
+          <div class="card-breakdown">
+            <span>This Semester: {{ stats.currentSemesterCourses }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">📊</div>
+        <div class="card-content">
+          <h3>System Health</h3>
+          <div class="card-value">{{ systemHealth.status }}</div>
+          <div class="card-breakdown">
+            <span>Last Check: {{ systemHealth.lastCheck }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+      <h3>Quick Actions</h3>
+      <div class="action-buttons">
+        <router-link to="/admin/users" class="action-btn">
+          <span class="icon">👥</span>
+          Manage Users
+        </router-link>
+        <router-link to="/admin/courses" class="action-btn">
+          <span class="icon">📚</span>
+          Manage Courses
+        </router-link>
+        <router-link to="/admin/enrollments" class="action-btn">
+          <span class="icon">📝</span>
+          Course Enrollments
+        </router-link>
+        <router-link to="/admin/logs" class="action-btn">
+          <span class="icon">📋</span>
+          System Logs
+        </router-link>
+      </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="recent-activity">
+      <h3>Recent Activity</h3>
+      <div class="activity-list">
+        <div v-for="activity in recentActivities" :key="activity.id" class="activity-item">
+          <div class="activity-icon" :class="activity.type">{{ activity.icon }}</div>
+          <div class="activity-details">
+            <div class="activity-message">{{ activity.message }}</div>
+            <div class="activity-time">{{ activity.time }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- System Notifications -->
+    <div class="system-notifications">
+      <h3>System Notifications</h3>
+      <div class="notification-list">
+        <div v-for="notification in notifications" :key="notification.id" 
+             class="notification-item" :class="notification.priority">
+          <div class="notification-content">
+            <div class="notification-title">{{ notification.title }}</div>
+            <div class="notification-message">{{ notification.message }}</div>
+          </div>
+          <button @click="dismissNotification(notification.id)" class="dismiss-btn">✕</button>
         </div>
       </div>
     </div>
@@ -99,276 +99,250 @@ import api from "@/services/api";
 export default {
   data() {
     return {
-      users: [],
-      form: {
-        username: "",
-        email: "",
-        user_type: "student",
-        is_active: true,
+      stats: {
+        totalUsers: 0,
+        studentCount: 0,
+        lecturerCount: 0,
+        activeCourses: 0,
+        currentSemesterCourses: 0
       },
-      editId: null,
-      message: "",
-      messageType: "",
-      showModal: false,
-      toDelete: null,
+      systemHealth: {
+        status: 'Healthy',
+        lastCheck: new Date().toLocaleString()
+      },
+      recentActivities: [],
+      notifications: []
     };
   },
   methods: {
-    fetchUsers() {
-      api
-        .get("/users")
-        .then((res) => (this.users = res.data))
-        .catch((err) => this.showMessage(this.errToText(err), "error"));
+    async fetchStats() {
+      try {
+        const response = await api.get('/admin/stats');
+        this.stats = response.data;
+      } catch (error) {
+        console.error('Failed to fetch stats:', error);
+      }
     },
-    submitForm() {
-      const isUpdate = !!this.editId;
-      const url = isUpdate ? `/users/${this.editId}` : "/users";
-      const method = isUpdate ? api.put : api.post;
-
-      method(url, this.form)
-        .then(() => {
-          this.fetchUsers();
-          this.resetForm();
-          this.showMessage(
-            `User ${isUpdate ? "updated" : "added"}!`,
-            "success"
-          );
-        })
-        .catch((err) => this.showMessage(this.errToText(err), "error"));
+    async fetchRecentActivities() {
+      try {
+        const response = await api.get('/admin/activities');
+        this.recentActivities = response.data.map(activity => ({
+          ...activity,
+          icon: this.getActivityIcon(activity.type)
+        }));
+      } catch (error) {
+        console.error('Failed to fetch activities:', error);
+      }
     },
-    editUser(user) {
-      this.form = { ...user };
-      this.editId = user.id;
+    async fetchNotifications() {
+      try {
+        const response = await api.get('/admin/notifications');
+        this.notifications = response.data;
+      } catch (error) {
+        console.error('Failed to fetch notifications:', error);
+      }
     },
-    confirmDelete(user) {
-      this.toDelete = user;
-      this.showModal = true;
-    },
-    cancelDelete() {
-      this.toDelete = null;
-      this.showModal = false;
-    },
-    deleteUserConfirmed() {
-      api
-        .delete(`/users/${this.toDelete.id}`)
-        .then(() => {
-          this.fetchUsers();
-          this.showMessage("User deleted.", "success");
-        })
-        .catch((err) => this.showMessage(this.errToText(err), "error"))
-        .finally(() => this.cancelDelete());
-    },
-    resetForm() {
-      this.form = {
-        username: "",
-        email: "",
-        user_type: "student",
-        is_active: true,
+    getActivityIcon(type) {
+      const icons = {
+        user: '👤',
+        course: '📚',
+        enrollment: '📝',
+        grade: '📊',
+        system: '⚙️'
       };
-      this.editId = null;
+      return icons[type] || '📌';
     },
-    showMessage(msg, type) {
-      this.message = msg;
-      this.messageType = type;
-      setTimeout(() => {
-        this.message = "";
-        this.messageType = "";
-      }, 3000);
-    },
-    errToText(err) {
-      return err.response
-        ? `Server error ${err.response.status}: ${
-            err.response.data || err.message
-          }`
-        : `Action Failed: ${err.message}`;
-    },
+    async dismissNotification(id) {
+      try {
+        await api.post(`/admin/notifications/${id}/dismiss`);
+        this.notifications = this.notifications.filter(n => n.id !== id);
+      } catch (error) {
+        console.error('Failed to dismiss notification:', error);
+      }
+    }
   },
   mounted() {
-    this.fetchUsers();
-  },
+    this.fetchStats();
+    this.fetchRecentActivities();
+    this.fetchNotifications();
+
+    // Refresh data periodically
+    setInterval(this.fetchStats, 300000); // every 5 minutes
+    setInterval(this.fetchRecentActivities, 60000); // every minute
+    setInterval(this.fetchNotifications, 60000); // every minute
+  }
 };
 </script>
 
 <style scoped>
-.user-management {
-  max-width: 900px;
-  margin: 0 auto;
+.admin-dashboard {
   padding: 2rem;
-  font-family: "Segoe UI", sans-serif;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 h2 {
-  font-size: 1.8rem;
-  margin-bottom: 1rem;
-  color: #333;
+  font-size: 2rem;
+  margin-bottom: 2rem;
+  color: #2d3748;
 }
 
-.alert {
-  padding: 1rem;
+h3 {
+  font-size: 1.25rem;
   margin-bottom: 1rem;
-  border-radius: 5px;
-  font-weight: 600;
-  text-align: center;
-}
-.alert.success {
-  background: #e6fffa;
-  color: #2c7a7b;
-  border: 1px solid #b2f5ea;
-}
-.alert.error {
-  background: #fff5f5;
-  color: #c53030;
-  border: 1px solid #feb2b2;
+  color: #4a5568;
 }
 
-.form-card {
-  background: #fff;
-  padding: 1.5rem;
-  border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+.overview-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
   margin-bottom: 2rem;
 }
-.form-row {
+
+.card {
+  background: white;
+  border-radius: 10px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.card-icon {
+  font-size: 2rem;
+  background: #ebf8ff;
+  padding: 1rem;
+  border-radius: 10px;
+}
+
+.card-content {
+  flex: 1;
+}
+
+.card-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #2b6cb0;
+  margin: 0.5rem 0;
+}
+
+.card-breakdown {
+  font-size: 0.875rem;
+  color: #718096;
   display: flex;
   gap: 1rem;
 }
-.form-group {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-.form-group label {
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-}
-input,
-select {
-  padding: 0.6rem;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  font-size: 1rem;
-}
-.form-actions {
-  margin-top: 1rem;
-}
-.btn {
-  padding: 0.6rem 1.2rem;
-  border: none;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  margin-right: 0.5rem;
-  transition: background 0.2s ease;
-}
-.primary {
-  background: #4f46e5;
-  color: #fff;
-}
-.primary:hover {
-  background: #4338ca;
-}
-.secondary {
-  background: #e5e7eb;
-  color: #374151;
-}
-.secondary:hover {
-  background: #d1d5db;
-}
-.small {
-  padding: 0.4rem 0.7rem;
-  font-size: 0.9rem;
-}
-.edit {
-  background: #facc15;
-  color: #1f2937;
-}
-.edit:hover {
-  background: #eab308;
-}
-.delete {
-  background: #f87171;
-  color: #fff;
-}
-.delete:hover {
-  background: #ef4444;
-}
 
-.user-list {
-  list-style: none;
-  padding: 0;
-}
-.user-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #f9fafb;
-  padding: 1rem;
+.quick-actions {
+  background: white;
   border-radius: 10px;
-  margin-bottom: 1rem;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-}
-.user-details {
-  display: flex;
-  flex-direction: column;
-}
-.user-name {
-  font-weight: bold;
-  font-size: 1.1rem;
-}
-.user-email {
-  font-size: 0.95rem;
-  color: #6b7280;
-}
-.user-tags {
-  margin-top: 0.5rem;
-}
-.tag {
-  display: inline-block;
-  background: #e5e7eb;
-  color: #374151;
-  padding: 0.2rem 0.6rem;
-  border-radius: 5px;
-  font-size: 0.8rem;
-  margin-right: 0.5rem;
-}
-.tag.role {
-  background: #c7d2fe;
-  color: #3730a3;
-}
-.tag.active {
-  background: #d1fae5;
-  color: #065f46;
-}
-.tag.inactive {
-  background: #fee2e2;
-  color: #991b1b;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+.action-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.action-btn {
   display: flex;
-  justify-content: center;
   align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: #f7fafc;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #4a5568;
+  transition: all 0.3s ease;
 }
-.modal {
-  background: #fff;
-  padding: 2rem;
-  border-radius: 12px;
-  width: 100%;
-  max-width: 400px;
-  text-align: center;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+
+.action-btn:hover {
+  background: #edf2f7;
+  transform: translateY(-2px);
 }
-.modal h3 {
-  margin-bottom: 1rem;
-  font-size: 1.2rem;
+
+.recent-activity, .system-notifications {
+  background: white;
+  border-radius: 10px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
-.modal-actions {
-  margin-top: 1.5rem;
+
+.activity-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.activity-icon {
+  font-size: 1.25rem;
+  padding: 0.5rem;
+  border-radius: 8px;
+  background: #f7fafc;
+}
+
+.activity-details {
+  flex: 1;
+}
+
+.activity-time {
+  font-size: 0.875rem;
+  color: #718096;
+}
+
+.notification-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  background: #f7fafc;
+}
+
+.notification-item.high {
+  background: #fff5f5;
+  border-left: 4px solid #f56565;
+}
+
+.notification-item.medium {
+  background: #fffaf0;
+  border-left: 4px solid #ed8936;
+}
+
+.notification-content {
+  flex: 1;
+}
+
+.notification-title {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.notification-message {
+  font-size: 0.875rem;
+  color: #718096;
+}
+
+.dismiss-btn {
+  padding: 0.25rem 0.5rem;
+  border: none;
+  background: none;
+  color: #a0aec0;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: color 0.3s ease;
+}
+
+.dismiss-btn:hover {
+  color: #718096;
 }
 </style>

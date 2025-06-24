@@ -377,7 +377,7 @@ export default {
           this.studentProgram = "Computer Science"; // Could be fetched from backend
 
           // Load enrolled courses
-          if (userData.role === "student") {
+          if (userData.role === "student" || userData.user_type === "student") {
             await this.loadEnrolledCourses(userData.id);
           }
         }

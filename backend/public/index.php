@@ -4,6 +4,7 @@ use Slim\Factory\AppFactory;
 use Slim\Middleware\ErrorMiddleware;
 use DI\Container;
 use Dotenv\Dotenv;
+use Slim\Psr7\Response;
 
 require __DIR__ . '/../vendor/autoload.php';
 
@@ -16,10 +17,6 @@ $container = new Container();
 
 // Set container to create App with on AppFactory
 AppFactory::setContainer($container);
-require __DIR__ . '/../src/db.php';
-
-use Slim\Factory\AppFactory;
-
 $app = AppFactory::create();
 
 // Parse json, form data and xml
@@ -29,25 +26,28 @@ $app->addBodyParsingMiddleware();
 $app->addRoutingMiddleware();
 
 // CORS Middleware - Enable cross-origin requests from frontend
-// This must be applied BEFORE routes are processed
-$app->add(function ($request, $handler) {
-    $response = $handler->handle($request);
-    
-    // Get the correct frontend URL from environment
-    $frontendUrl = $_ENV['FRONTEND_URL'] ?? 'http://localhost:8081';
-    
+$app->add(function ($request, $handler) use ($app) {
+    $origin = $_ENV['FRONTEND_URL'] ?? 'http://localhost:8081';
+
+    // Handle preflight OPTIONS request
+    if ($request->getMethod() === 'OPTIONS') {
+        $response = new Response();
+        return $response
+            ->withStatus(200)
+            ->withHeader('Access-Control-Allow-Origin', $origin)
+            ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
+            ->withHeader('Access-Control-Allow-Credentials', 'true')
+            ->withHeader('Access-Control-Max-Age', '3600');
+    }
+
+    // Handle actual request
+        $response = $handler->handle($request);
     return $response
-        ->withHeader('Access-Control-Allow-Origin', $frontendUrl)
+        ->withHeader('Access-Control-Allow-Origin', $origin)
         ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
         ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
         ->withHeader('Access-Control-Allow-Credentials', 'true');
-});
-
-// Handle preflight OPTIONS requests BEFORE routing
-// This is crucial for CORS to work properly
-$app->options('/{routes:.+}', function ($request, $response, $args) {
-    // Return response with CORS headers already set by middleware above
-    return $response;
 });
 
 // Add a simple test route to verify server is working
@@ -63,9 +63,27 @@ $app->get('/', function ($request, $response) {
     return $response->withHeader('Content-Type', 'application/json');
 });
 
-// Load routes from separate file
-$routes = require __DIR__ . '/../app/routes.php';
-$routes($app);
+// Group all routes under /api
+$app->group('/api', function ($group) {
+    (require __DIR__ . '/../routes/users.php')($group);
+    (require __DIR__ . '/../routes/students.php')($group);
+    (require __DIR__ . '/../routes/course_enrollments.php')($group);
+    (require __DIR__ . '/../routes/marks.php')($group);
+    (require __DIR__ . '/../routes/notifications.php')($group);
+    (require __DIR__ . '/../routes/students-components.php')($group);
+    (require __DIR__ . '/../routes/courses.php')($group);
+    (require __DIR__ . '/../routes/course_lecturers.php')($group);
+    (require __DIR__ . '/../routes/admin.php')($group);
+    (require __DIR__ . '/../routes/remark_requests.php')($group);
+    (require __DIR__ . '/../routes/auth.php')($group);
+    (require __DIR__ . '/../routes/health.php')($group);
+    (require __DIR__ . '/../routes/test.php')($group);
+    (require __DIR__ . '/../routes/userprofile.php')($group);
+    (require __DIR__ . '/../routes/student_performance.php')($group);
+    (require __DIR__ . '/../routes/lecturer.php')($group);
+    (require __DIR__ . '/../routes/advisor.php')($group);
+    (require __DIR__ . '/../routes/catchall.php')($group);
+});
 
 // Error Middleware with better error handling
 $errorMiddleware = $app->addErrorMiddleware(
@@ -109,40 +127,19 @@ $errorHandler = function (
 
     $response->getBody()->write(json_encode($errorData, JSON_PRETTY_PRINT));
     
-    return $response->withHeader('Content-Type', 'application/json');
+    // Add CORS headers to error responses as well
+    $origin = $_ENV['FRONTEND_URL'] ?? 'http://localhost:8081';
+    $response = $response
+        ->withHeader('Access-Control-Allow-Origin', $origin)
+        ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+        ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
+        ->withHeader('Access-Control-Allow-Credentials', 'true')
+        ->withHeader('Content-Type', 'application/json');
+
+    return $response;
 };
 
 $errorMiddleware->setDefaultErrorHandler($errorHandler);
 
 // Run the application
-$app->run();
-$app->addBodyParsingMiddleware();
-
-// ✅ CORS + preflight handling middleware
-$app->add(function ($request, $handler) {
-    $origin = $request->getHeaderLine('Origin') ?: '*';
-
-    // Handle preflight request
-    if ($request->getMethod() === 'OPTIONS') {
-        $response = new \Slim\Psr7\Response(204);
-    } else {
-        $response = $handler->handle($request);
-    }
-
-    return $response
-        ->withHeader('Access-Control-Allow-Origin', $origin)
-        ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
-        ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-        ->withHeader('Access-Control-Allow-Credentials', 'true');
-});
-
-(require __DIR__ . '/../routes/users.php')($app);
-(require __DIR__ . '/../routes/students.php')($app);
-(require __DIR__ . '/../routes/course_enrollments.php')($app);
-
-(require __DIR__ . '/../routes/marks.php')($app);
-
-(require __DIR__ . '/../routes/notifications.php')($app);
-
-(require __DIR__ . '/../routes/students-components.php')($app);
 $app->run();

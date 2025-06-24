@@ -126,6 +126,69 @@ class LecturerController extends BaseController
     }
 
     /**
+     * Get lecturer's courses only
+     * GET /api/lecturer/{lecturerId}/courses
+     */
+    public function getCourses(Request $request, Response $response, array $args): Response
+    {
+        try {
+            $lecturerId = (int)$args['lecturerId'];
+
+            // Verify lecturer access
+            $userRole = $this->getUserRole($request);
+            $currentUserId = $this->getUserId($request);
+            if ($userRole === 'lecturer' && $currentUserId !== $lecturerId) {
+                return $this->errorResponse($response, 'Access denied', 403);
+            }
+
+            $coursesSql = "
+                SELECT 
+                    c.id as course_id,
+                    c.course_code,
+                    c.course_name,
+                    c.credits,
+                    c.semester,
+                    COUNT(DISTINCT ce.student_id) as enrolled_students,
+                    COUNT(DISTINCT ac.id) as total_components,
+                    COUNT(DISTINCT CASE WHEN sm.marks_obtained IS NOT NULL THEN sm.id END) as graded_components,
+                    AVG(CASE 
+                        WHEN ac.component_type != 'final_exam' AND sm.marks_obtained IS NOT NULL
+                        THEN (sm.marks_obtained / ac.max_marks) * 100 
+                        ELSE NULL 
+                    END) as avg_continuous_performance,
+                    AVG(CASE 
+                        WHEN ac.component_type = 'final_exam' AND sm.marks_obtained IS NOT NULL
+                        THEN (sm.marks_obtained / ac.max_marks) * 100 
+                        ELSE NULL 
+                    END) as avg_final_exam_performance
+                FROM course_lecturers cl
+                JOIN courses c ON cl.course_id = c.id
+                LEFT JOIN course_enrollments ce ON c.id = ce.course_id AND ce.status = 'active'
+                LEFT JOIN assessment_components ac ON c.id = ac.course_id AND ac.is_published = TRUE
+                LEFT JOIN student_marks sm ON ac.id = sm.assessment_component_id
+                WHERE cl.lecturer_id = ? AND cl.role = 'primary'
+                GROUP BY c.id, c.course_code, c.course_name, c.credits, c.semester
+                ORDER BY c.semester DESC, c.course_code
+            ";
+
+            $stmt = $this->db->prepare($coursesSql);
+            $stmt->execute([$lecturerId]);
+            $courses = $stmt->fetchAll();
+
+            foreach ($courses as &$course) {
+                $course['completion_rate'] = $course['total_components'] > 0 ? 
+                    round(($course['graded_components'] / $course['total_components']) * 100, 1) : 0;
+            }
+
+            return $this->successResponse($response, [
+                'courses' => $courses
+            ]);
+        } catch (\Exception $e) {
+            return $this->errorResponse($response, 'Failed to fetch courses: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
      * Get students in a specific course
      * GET /api/lecturer/{lecturerId}/course/{courseId}/students
      */
@@ -323,7 +386,7 @@ class LecturerController extends BaseController
 
             return $this->successResponse($response, [
                 'component_id' => $componentId,
-                'message' => $data['id'] ? 'Component updated successfully' : 'Component created successfully'
+                'message' => isset($data['id']) ? 'Component updated successfully' : 'Component created successfully'
             ]);
 
         } catch (\Exception $e) {

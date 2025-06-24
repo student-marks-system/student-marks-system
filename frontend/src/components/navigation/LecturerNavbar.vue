@@ -1,202 +1,85 @@
 <template>
   <nav class="lecturer-navbar">
-    <div class="nav-container">
-      <!-- Logo and Brand -->
-      <div class="nav-brand">
-        <router-link to="/lecturer/dashboard" class="brand-link">
-          <div class="brand-icon">🎓</div>
-          <span class="brand-text">Lecturer Portal</span>
-        </router-link>
-      </div>
+    <div class="navbar-container">
+      <!-- Brand -->
+      <router-link to="/lecturer/dashboard" class="navbar-brand">
+        <span class="brand-logo">🎓</span>
+        <span class="brand-title">Lecturer Portal</span>
+      </router-link>
 
-      <!-- Navigation Links -->
-      <div class="nav-links">
-        <router-link
-          to="/lecturer/dashboard"
-          class="nav-item"
-          :class="{ active: $route.path === '/lecturer/dashboard' }"
-        >
-          <div class="nav-icon">🏠</div>
+      <!-- Desktop Nav Links -->
+      <div class="navbar-links" v-if="!showMobileMenu">
+        <router-link to="/lecturer/dashboard" class="nav-link" :class="{ active: $route.path === '/lecturer/dashboard' }">
+          <span class="nav-icon">🏠</span>
           <span class="nav-text">Dashboard</span>
         </router-link>
-
-        <div
-          class="nav-dropdown"
-          @mouseover="showCoursesDropdown = true"
-          @mouseleave="showCoursesDropdown = false"
-        >
-          <div
-            class="nav-item dropdown-trigger"
-            :class="{ active: isCoursesActive }"
-          >
-            <div class="nav-icon">📚</div>
+        <div class="nav-dropdown" @mouseenter="showCoursesDropdown = true" @mouseleave="showCoursesDropdown = false">
+          <div class="nav-link dropdown-trigger" :class="{ active: isCoursesActive }">
+            <span class="nav-icon">📚</span>
             <span class="nav-text">My Courses</span>
-            <div class="dropdown-arrow">▼</div>
+            <span class="dropdown-arrow">▼</span>
           </div>
-          <div class="dropdown-menu" :class="{ show: showCoursesDropdown }">
-            <router-link
-              v-for="course in lecturerCourses"
-              :key="course.id"
-              :to="`/lecturer/course/${course.id}`"
-              class="dropdown-item"
-            >
-              <div class="course-info">
-                <span class="course-code">{{ course.code }}</span>
-                <span class="course-name">{{ course.name }}</span>
-              </div>
-              <div class="course-stats">
-                <span class="student-count"
-                  >{{ course.enrolled_students }} students</span
-                >
-              </div>
+          <div class="dropdown-menu" v-if="showCoursesDropdown">
+            <router-link v-for="course in lecturerCourses" :key="course.id" :to="`/lecturer/course/${course.id}`" class="dropdown-item">
+              <span class="course-code">{{ course.code }}</span>
+              <span class="course-name">{{ course.name }}</span>
             </router-link>
           </div>
         </div>
-
-        <router-link
-          to="/lecturer/analytics"
-          class="nav-item"
-          :class="{ active: $route.path === '/lecturer/analytics' }"
-        >
-          <div class="nav-icon">📊</div>
+        <router-link to="/lecturer/student-management" class="nav-link" :class="{ active: $route.path === '/lecturer/student-management' }">
+          <span class="nav-icon">👥</span>
+          <span class="nav-text">Student Management</span>
+        </router-link>
+        <router-link to="/lecturer/analytics" class="nav-link" :class="{ active: $route.path === '/lecturer/analytics' }">
+          <span class="nav-icon">📊</span>
           <span class="nav-text">Analytics</span>
         </router-link>
-
-        <router-link
-          to="/lecturer/notifications"
-          class="nav-item"
-          :class="{ active: $route.path === '/lecturer/notifications' }"
-        >
-          <div class="nav-icon">🔔</div>
+        <router-link to="/lecturer/notifications" class="nav-link" :class="{ active: $route.path === '/lecturer/notifications' }">
+          <span class="nav-icon">🔔</span>
           <span class="nav-text">Notifications</span>
         </router-link>
       </div>
 
-      <!-- User Menu -->
-      <div class="user-menu">
-        <div
-          class="user-dropdown"
-          @mouseover="showUserDropdown = true"
-          @mouseleave="showUserDropdown = false"
-        >
+      <!-- User Dropdown -->
+      <div class="navbar-user" v-if="!showMobileMenu">
+        <div class="user-dropdown" @click.stop="toggleUserDropdown">
+          <div class="user-avatar">{{ getLecturerInitials(lecturerName) }}</div>
           <div class="user-info">
-            <div class="user-avatar">
-              {{ getLecturerInitials(lecturerName) }}
-            </div>
-            <div class="user-details">
-              <span class="user-name">{{ lecturerName }}</span>
-              <span class="user-role">Lecturer</span>
-            </div>
-            <div class="dropdown-arrow">▼</div>
+            <span class="user-name">{{ lecturerName }}</span>
+            <span class="user-role">Lecturer</span>
           </div>
-          <div class="dropdown-menu" :class="{ show: showUserDropdown }">
-            <router-link to="/lecturer/profile" class="dropdown-item">
-              <div class="dropdown-icon">👤</div>
-              <span>Profile</span>
-            </router-link>
-            <router-link to="/lecturer/settings" class="dropdown-item">
-              <div class="dropdown-icon">⚙️</div>
-              <span>Settings</span>
-            </router-link>
-            <div class="dropdown-divider"></div>
-            <button @click="logout" class="dropdown-item logout-btn">
-              <div class="dropdown-icon">🚪</div>
-              <span>Logout</span>
-            </button>
+          <span class="dropdown-arrow">▼</span>
+          <div class="user-menu" v-if="showUserDropdown">
+            <router-link to="/lecturer/profile" class="user-menu-item">👤 Profile</router-link>
+            <router-link to="/lecturer/settings" class="user-menu-item">⚙️ Settings</router-link>
+            <div class="user-menu-divider"></div>
+            <button class="user-menu-item logout" @click="logout">🚪 Logout</button>
           </div>
         </div>
       </div>
 
-      <!-- Mobile Menu Toggle -->
-      <button class="mobile-menu-toggle" @click="toggleMobileMenu">
-        <span class="hamburger"></span>
+      <!-- Hamburger for Mobile -->
+      <button class="navbar-hamburger" @click="toggleMobileMenu">
+        <span class="hamburger-bar"></span>
+        <span class="hamburger-bar"></span>
+        <span class="hamburger-bar"></span>
       </button>
     </div>
 
-    <!-- Mobile Navigation Menu -->
-    <div class="mobile-nav" :class="{ show: showMobileMenu }">
-      <div class="mobile-nav-header">
-        <div class="mobile-profile">
-          <div class="mobile-avatar">
-            {{ getLecturerInitials(lecturerName) }}
-          </div>
-          <div class="mobile-profile-info">
-            <h4>{{ lecturerName }}</h4>
-            <p>Lecturer</p>
-          </div>
-        </div>
+    <!-- Mobile Menu -->
+    <div class="mobile-menu" v-if="showMobileMenu">
+      <router-link to="/lecturer/dashboard" class="mobile-menu-item" @click="closeMobileMenu">🏠 Dashboard</router-link>
+      <div class="mobile-menu-section">
+        <div class="mobile-menu-title">My Courses</div>
+        <router-link v-for="course in lecturerCourses" :key="course.id" :to="`/lecturer/course/${course.id}`" class="mobile-menu-item" @click="closeMobileMenu">
+          <span class="course-code">{{ course.code }}</span> - <span class="course-name">{{ course.name }}</span>
+        </router-link>
       </div>
-
-      <div class="mobile-nav-links">
-        <router-link
-          to="/lecturer/dashboard"
-          class="mobile-nav-item"
-          @click="closeMobileMenu"
-        >
-          <div class="mobile-nav-icon">🏠</div>
-          <span>Dashboard</span>
-        </router-link>
-
-        <div class="mobile-nav-section">
-          <h5>My Courses</h5>
-          <router-link
-            v-for="course in lecturerCourses"
-            :key="course.id"
-            :to="`/lecturer/course/${course.id}`"
-            class="mobile-nav-item course-item"
-            @click="closeMobileMenu"
-          >
-            <div class="mobile-course-info">
-              <span class="mobile-course-code">{{ course.code }}</span>
-              <span class="mobile-course-name">{{ course.name }}</span>
-            </div>
-            <div class="mobile-course-stats">
-              {{ course.enrolled_students }} students
-            </div>
-          </router-link>
-        </div>
-
-        <router-link
-          to="/lecturer/analytics"
-          class="mobile-nav-item"
-          @click="closeMobileMenu"
-        >
-          <div class="mobile-nav-icon">📊</div>
-          <span>Analytics</span>
-        </router-link>
-
-        <router-link
-          to="/lecturer/notifications"
-          class="mobile-nav-item"
-          @click="closeMobileMenu"
-        >
-          <div class="mobile-nav-icon">🔔</div>
-          <span>Notifications</span>
-        </router-link>
-
-        <router-link
-          to="/lecturer/profile"
-          class="mobile-nav-item"
-          @click="closeMobileMenu"
-        >
-          <div class="mobile-nav-icon">👤</div>
-          <span>Profile</span>
-        </router-link>
-
-        <router-link
-          to="/lecturer/settings"
-          class="mobile-nav-item"
-          @click="closeMobileMenu"
-        >
-          <div class="mobile-nav-icon">⚙️</div>
-          <span>Settings</span>
-        </router-link>
-
-        <button @click="logout" class="mobile-nav-item logout-btn">
-          <div class="mobile-nav-icon">🚪</div>
-          <span>Logout</span>
-        </button>
-      </div>
+      <router-link to="/lecturer/analytics" class="mobile-menu-item" @click="closeMobileMenu">📊 Analytics</router-link>
+      <router-link to="/lecturer/notifications" class="mobile-menu-item" @click="closeMobileMenu">🔔 Notifications</router-link>
+      <router-link to="/lecturer/profile" class="mobile-menu-item" @click="closeMobileMenu">👤 Profile</router-link>
+      <router-link to="/lecturer/settings" class="mobile-menu-item" @click="closeMobileMenu">⚙️ Settings</router-link>
+      <button class="mobile-menu-item logout" @click="logout">🚪 Logout</button>
     </div>
   </nav>
 </template>
@@ -224,25 +107,18 @@ export default {
   },
   async mounted() {
     await this.loadLecturerData();
-
-    // Close dropdowns when clicking outside
-    document.addEventListener("click", (event) => {
-      if (!this.$el.contains(event.target)) {
-        this.showUserDropdown = false;
-        this.showCoursesDropdown = false;
-      }
-    });
+    document.addEventListener("click", this.handleClickOutside);
+  },
+  beforeUnmount() {
+    document.removeEventListener("click", this.handleClickOutside);
   },
   methods: {
     async loadLecturerData() {
       try {
-        // Get user profile
         const userResponse = await utilityAPI.getUserProfile();
         if (userResponse.success) {
           this.lecturerName = userResponse.data.full_name;
           this.lecturerId = userResponse.data.id;
-
-          // Load lecturer's courses
           const coursesResponse = await lecturerAPI.getCourses(this.lecturerId);
           if (coursesResponse.success) {
             this.lecturerCourses = coursesResponse.data.courses || [];
@@ -252,7 +128,6 @@ export default {
         console.error("Error loading lecturer data:", error);
       }
     },
-
     getLecturerInitials(name) {
       return name
         .split(" ")
@@ -261,23 +136,27 @@ export default {
         .toUpperCase()
         .slice(0, 2);
     },
-
+    toggleUserDropdown() {
+      this.showUserDropdown = !this.showUserDropdown;
+    },
+    handleClickOutside(event) {
+      if (!this.$el.contains(event.target)) {
+        this.showUserDropdown = false;
+        this.showCoursesDropdown = false;
+        this.showMobileMenu = false;
+      }
+    },
     toggleMobileMenu() {
       this.showMobileMenu = !this.showMobileMenu;
     },
-
     closeMobileMenu() {
       this.showMobileMenu = false;
     },
-
     async logout() {
-      console.log("Logging out lecturer...");
       try {
         await authService.logout();
         this.$router.push("/login");
       } catch (error) {
-        console.error("Logout error:", error);
-        // Force redirect even if logout fails
         this.$router.push("/login");
       }
     },
@@ -291,389 +170,284 @@ export default {
   top: 0;
   left: 0;
   right: 0;
-  height: 80px;
-  background: white;
-  border-bottom: 1px solid #e2e8f0;
+  height: 64px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
   z-index: 1000;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  display: flex;
+  align-items: center;
 }
 
-.nav-container {
+.navbar-container {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 0 20px;
-  height: 100%;
+  padding: 0 2rem;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  height: 100%;
 }
 
-/* Brand */
-.nav-brand {
-  flex-shrink: 0;
-}
-
-.brand-link {
+.navbar-brand {
   display: flex;
   align-items: center;
   text-decoration: none;
   color: #1e293b;
   font-weight: 700;
   font-size: 1.2rem;
+  gap: 0.75rem;
 }
-
-.brand-icon {
-  font-size: 1.5rem;
-  margin-right: 8px;
+.brand-logo {
+  font-size: 2rem;
 }
-
-/* Navigation Links */
-.nav-links {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  padding: 12px 16px;
-  text-decoration: none;
-  color: #64748b;
-  border-radius: 8px;
-  transition: all 0.2s;
-  font-weight: 500;
-}
-
-.nav-item:hover,
-.nav-item.active {
-  background: #eff6ff;
-  color: #3b82f6;
-}
-
-.nav-icon {
+.brand-title {
   font-size: 1.1rem;
-  margin-right: 8px;
+  font-weight: 600;
 }
 
-/* Dropdown */
+.navbar-links {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+}
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #64748b;
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  transition: background 0.2s, color 0.2s;
+}
+.nav-link.active, .nav-link:hover {
+  background: #eff6ff;
+  color: #2563eb;
+}
+.nav-icon {
+  font-size: 1.2rem;
+}
+
 .nav-dropdown {
   position: relative;
 }
-
 .dropdown-trigger {
   cursor: pointer;
 }
-
 .dropdown-arrow {
   font-size: 0.8rem;
   margin-left: 4px;
-  transition: transform 0.2s;
 }
-
 .dropdown-menu {
   position: absolute;
-  top: 100%;
+  top: 110%;
   left: 0;
-  min-width: 280px;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(-10px);
-  transition: all 0.2s;
-  z-index: 1000;
+  min-width: 220px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  padding: 0.5rem 0;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  animation: fadeIn 0.2s;
 }
-
-.dropdown-menu.show {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-
 .dropdown-item {
+  padding: 0.75rem 1.2rem;
+  color: #1e293b;
+  text-decoration: none;
+  font-size: 0.97rem;
+  border: none;
+  background: none;
+  text-align: left;
+  transition: background 0.2s;
+  cursor: pointer;
+}
+.dropdown-item:hover {
+  background: #f1f5f9;
+}
+.course-code {
+  font-weight: 600;
+  color: #2563eb;
+  margin-right: 0.5rem;
+}
+.course-name {
+  color: #64748b;
+}
+
+.navbar-user {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  text-decoration: none;
-  color: #374151;
+}
+.user-dropdown {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  cursor: pointer;
+  position: relative;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
   transition: background 0.2s;
-  border-bottom: 1px solid #f3f4f6;
 }
-
-.dropdown-item:last-child {
-  border-bottom: none;
+.user-dropdown:hover {
+  background: #f1f5f9;
 }
-
-.dropdown-item:hover {
-  background: #f9fafb;
+.user-avatar {
+  width: 2.2rem;
+  height: 2.2rem;
+  background: #2563eb;
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
 }
-
-.course-info {
+.user-info {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
 }
-
-.course-code {
-  font-weight: 600;
-  color: #1e293b;
-  font-size: 0.9rem;
-}
-
-.course-name {
-  font-size: 0.8rem;
-  color: #6b7280;
-  margin-top: 2px;
-}
-
-.course-stats {
-  font-size: 0.8rem;
-  color: #6b7280;
-}
-
-/* User Menu */
-.user-menu {
-  position: relative;
-}
-
-.user-dropdown {
-  cursor: pointer;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  padding: 8px 12px;
-  border-radius: 8px;
-  transition: background 0.2s;
-}
-
-.user-info:hover {
-  background: #f9fafb;
-}
-
-.user-avatar {
-  width: 36px;
-  height: 36px;
-  background: #3b82f6;
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 0.9rem;
-  margin-right: 12px;
-}
-
-.user-details {
-  display: flex;
-  flex-direction: column;
-  margin-right: 8px;
-}
-
 .user-name {
   font-weight: 600;
+  font-size: 0.97rem;
   color: #1e293b;
-  font-size: 0.9rem;
 }
-
 .user-role {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+.dropdown-arrow {
   font-size: 0.8rem;
-  color: #6b7280;
+  color: #64748b;
 }
-
-.dropdown-icon {
-  font-size: 1rem;
-  margin-right: 8px;
+.user-menu {
+  position: absolute;
+  top: 120%;
+  right: 0;
+  min-width: 180px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  padding: 0.5rem 0;
+  z-index: 3000;
+  display: flex;
+  flex-direction: column;
+  animation: fadeIn 0.2s;
 }
-
-.dropdown-divider {
+.user-menu-item {
+  padding: 0.7rem 1.2rem;
+  color: #1e293b;
+  text-decoration: none;
+  font-size: 0.97rem;
+  border: none;
+  background: none;
+  text-align: left;
+  transition: background 0.2s;
+  cursor: pointer;
+}
+.user-menu-item:hover {
+  background: #f1f5f9;
+}
+.user-menu-divider {
   height: 1px;
   background: #e5e7eb;
-  margin: 8px 0;
+  margin: 0.3rem 0;
 }
-
-.logout-btn {
-  background: none;
-  border: none;
-  width: 100%;
-  text-align: left;
-  cursor: pointer;
+.user-menu-item.logout {
   color: #ef4444;
 }
-
-.logout-btn:hover {
+.user-menu-item.logout:hover {
   background: #fef2f2;
 }
 
-/* Mobile Menu */
-.mobile-menu-toggle {
+.navbar-hamburger {
   display: none;
+  flex-direction: column;
+  gap: 4px;
   background: none;
   border: none;
   cursor: pointer;
-  padding: 8px;
+  margin-left: 1rem;
+}
+.hamburger-bar {
+  width: 28px;
+  height: 3px;
+  background: #64748b;
+  border-radius: 2px;
+  transition: all 0.2s;
 }
 
-.hamburger {
-  display: block;
-  width: 24px;
-  height: 2px;
-  background: #374151;
-  position: relative;
-  transition: all 0.3s;
+/* Mobile Styles */
+@media (max-width: 900px) {
+  .navbar-links {
+    gap: 0.5rem;
+  }
+  .navbar-container {
+    padding: 0 0.5rem;
+  }
 }
-
-.hamburger::before,
-.hamburger::after {
-  content: "";
-  position: absolute;
-  width: 24px;
-  height: 2px;
-  background: #374151;
-  transition: all 0.3s;
-}
-
-.hamburger::before {
-  top: -6px;
-}
-
-.hamburger::after {
-  bottom: -6px;
-}
-
-.mobile-nav {
-  position: fixed;
-  top: 80px;
-  left: 0;
-  right: 0;
-  background: white;
-  border-top: 1px solid #e2e8f0;
-  transform: translateY(-100%);
-  transition: transform 0.3s;
-  z-index: 999;
-  max-height: calc(100vh - 80px);
-  overflow-y: auto;
-}
-
-.mobile-nav.show {
-  transform: translateY(0);
-}
-
-.mobile-nav-header {
-  padding: 20px;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.mobile-profile {
-  display: flex;
-  align-items: center;
-}
-
-.mobile-avatar {
-  width: 48px;
-  height: 48px;
-  background: #3b82f6;
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 1.1rem;
-  margin-right: 16px;
-}
-
-.mobile-profile-info h4 {
-  margin: 0;
-  font-size: 1.1rem;
-  color: #1e293b;
-}
-
-.mobile-profile-info p {
-  margin: 4px 0 0 0;
-  color: #6b7280;
-  font-size: 0.9rem;
-}
-
-.mobile-nav-links {
-  padding: 20px;
-}
-
-.mobile-nav-item {
-  display: flex;
-  align-items: center;
-  padding: 16px 0;
-  text-decoration: none;
-  color: #374151;
-  border-bottom: 1px solid #f3f4f6;
-  font-weight: 500;
-}
-
-.mobile-nav-item:last-child {
-  border-bottom: none;
-}
-
-.mobile-nav-icon {
-  font-size: 1.2rem;
-  margin-right: 16px;
-  width: 24px;
-  text-align: center;
-}
-
-.mobile-nav-section {
-  margin: 24px 0;
-}
-
-.mobile-nav-section h5 {
-  margin: 0 0 12px 0;
-  color: #6b7280;
-  font-size: 0.9rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.mobile-course-info {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-}
-
-.mobile-course-code {
-  font-weight: 600;
-  color: #1e293b;
-}
-
-.mobile-course-name {
-  font-size: 0.9rem;
-  color: #6b7280;
-  margin-top: 2px;
-}
-
-.mobile-course-stats {
-  font-size: 0.8rem;
-  color: #6b7280;
-}
-
-/* Responsive Design */
 @media (max-width: 768px) {
-  .nav-links,
-  .user-menu {
+  .navbar-links,
+  .navbar-user {
     display: none;
   }
-
-  .mobile-menu-toggle {
-    display: block;
+  .navbar-hamburger {
+    display: flex;
   }
-
-  .nav-container {
-    padding: 0 16px;
+  .mobile-menu {
+    position: fixed;
+    top: 64px;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border-top: 1px solid #e5e7eb;
+    z-index: 4000;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+    animation: fadeIn 0.2s;
+  }
+  .mobile-menu-item {
+    padding: 1.1rem 1.5rem;
+    color: #1e293b;
+    text-decoration: none;
+    font-size: 1.05rem;
+    border: none;
+    background: none;
+    text-align: left;
+    transition: background 0.2s;
+    cursor: pointer;
+  }
+  .mobile-menu-item:hover {
+    background: #f1f5f9;
+  }
+  .mobile-menu-item.logout {
+    color: #ef4444;
+  }
+  .mobile-menu-item.logout:hover {
+    background: #fef2f2;
+  }
+  .mobile-menu-section {
+    margin: 0.5rem 0;
+  }
+  .mobile-menu-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #64748b;
+    margin: 0.5rem 1.5rem 0.2rem 1.5rem;
   }
 }
 </style>

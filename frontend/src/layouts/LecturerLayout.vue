@@ -1,12 +1,11 @@
 <template>
-  <div class="lecturer-layout">
-    <!-- Navigation Bar -->
+  <div>
+    <!-- Include Navbar -->
     <LecturerNavbar />
-
-    <!-- Main Content -->
-    <main class="main-content">
+    <!-- Main Content Area -->
+    <div class="main-content">
       <router-view />
-    </main>
+    </div>
   </div>
 </template>
 
@@ -22,13 +21,16 @@ export default {
 </script>
 
 <style scoped>
-.lecturer-layout {
-  min-height: 100vh;
-  background-color: #f8fafc;
+.main-content {
+  margin-top: 80px; /* Account for fixed navbar height */
+  padding: 20px;
+  min-height: calc(100vh - 80px); /* Ensure full height minus navbar */
 }
 
-.main-content {
-  padding-top: 80px; /* Account for fixed navbar */
-  min-height: calc(100vh - 80px);
+/* Optional: Add some breathing room */
+@media (max-width: 768px) {
+  .main-content {
+    padding: 16px;
+  }
 }
 </style>

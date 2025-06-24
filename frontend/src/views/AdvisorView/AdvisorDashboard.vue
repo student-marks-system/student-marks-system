@@ -3,7 +3,7 @@
     <!-- Header Component -->
     <AdvisorDashboardHeader
       :advisor-name="advisorName"
-      :advisor-id="advisorId"
+      :advisor-id="advisorId != null ? String(advisorId) : ''"
       :department="department"
       :total-advisees="totalAdvisees"
       :at-risk-students="atRiskStudents"
@@ -194,7 +194,7 @@ export default {
         if (response.success) {
           const userData = response.data;
 
-          if (userData.role === "advisor") {
+          if ((userData.role === "advisor") || (userData.user_type === "advisor")) {
             this.advisorId = userData.id;
             this.advisorName = userData.full_name || "Dr. Advisor";
             this.department = userData.department || "";

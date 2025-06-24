@@ -28,10 +28,20 @@ const api = axios.create({
 // Request interceptor to add authentication token
 api.interceptors.request.use(
   (config) => {
+    // Add auth token if available
     const token = authService.getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    console.log('API Request:', {
+      method: config.method,
+      url: config.url,
+      baseURL: config.baseURL,
+      params: config.params,
+      data: config.data
+    });
+
     return config;
   },
   (error) => {
@@ -41,8 +51,22 @@ api.interceptors.request.use(
 
 // Response interceptor for error handling and token refresh
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('API Response:', {
+      status: response.status,
+      data: response.data,
+      headers: response.headers
+    });
+    return response;
+  },
   async (error) => {
+    console.error('API Error:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+      config: error.config
+    });
+
     const originalRequest = error.config;
 
     if (error.response?.status === 401 && !originalRequest._retry) {
@@ -252,8 +276,13 @@ export const studentPerformanceAPI = {
   submitRemarkRequest: async (studentId, courseId, remarkData) => {
     try {
       const response = await api.post(
-        `/student/${studentId}/course/${courseId}/remark-request`,
-        remarkData
+        `/remark-requests/submit`,
+        {
+          student_id: studentId,
+          assessment_component_id: remarkData.component_id,
+          justification: remarkData.reason,
+          original_marks: Number.isFinite(remarkData.original_marks) ? remarkData.original_marks : 0,
+        }
       );
       return handleApiResponse(response);
     } catch (error) {
@@ -264,7 +293,7 @@ export const studentPerformanceAPI = {
   // Get remark requests for student
   getRemarkRequests: async (studentId) => {
     try {
-      const response = await api.get(`/student/${studentId}/remark-requests`);
+      const response = await api.get(`/remark-requests/student/${studentId}`);
       return handleApiResponse(response);
     } catch (error) {
       return handleApiError(error);
@@ -428,9 +457,9 @@ export const lecturerAPI = {
   },
 
   // Get course assessment components
-  getCourseComponents: async (courseId) => {
+  getCourseComponents: async (lecturerId, courseId) => {
     try {
-      const response = await api.get(`/course/${courseId}/components`);
+      const response = await api.get(`/lecturer/${lecturerId}/course/${courseId}/components`);
       return handleApiResponse(response);
     } catch (error) {
       return handleApiError(error);
@@ -438,10 +467,10 @@ export const lecturerAPI = {
   },
 
   // Create/update assessment component
-  updateCourseComponent: async (courseId, componentData) => {
+  updateCourseComponent: async (lecturerId, courseId, componentData) => {
     try {
       const response = await api.post(
-        `/course/${courseId}/components`,
+        `/lecturer/${lecturerId}/course/${courseId}/components`,
         componentData
       );
       return handleApiResponse(response);
@@ -472,9 +501,9 @@ export const lecturerAPI = {
   },
 
   // Export marks as CSV
-  exportMarks: async (courseId) => {
+  exportMarks: async (lecturerId, courseId) => {
     try {
-      const response = await api.get(`/course/${courseId}/marks/export`, {
+      const response = await api.get(`/lecturer/${lecturerId}/course/${courseId}/marks/export`, {
         responseType: "blob",
       });
       return {
@@ -640,6 +669,59 @@ export const utilityAPI = {
       return handleApiError(error);
     }
   },
+};
+
+// Course Management API Services
+export const courseAPI = {
+  // Get all courses
+  getAllCourses: async () => {
+    try {
+      const response = await api.get("/courses");
+      return handleApiResponse(response);
+    } catch (error) {
+      return handleApiError(error);
+    }
+  },
+
+  // Get single course
+  getCourse: async (courseId) => {
+    try {
+      const response = await api.get(`/courses/${courseId}`);
+      return handleApiResponse(response);
+    } catch (error) {
+      return handleApiError(error);
+    }
+  },
+
+  // Create course
+  createCourse: async (courseData) => {
+    try {
+      const response = await api.post("/courses", courseData);
+      return handleApiResponse(response);
+    } catch (error) {
+      return handleApiError(error);
+    }
+  },
+
+  // Update course
+  updateCourse: async (courseId, courseData) => {
+    try {
+      const response = await api.put(`/courses/${courseId}`, courseData);
+      return handleApiResponse(response);
+    } catch (error) {
+      return handleApiError(error);
+    }
+  },
+
+  // Delete course
+  deleteCourse: async (courseId) => {
+    try {
+      const response = await api.delete(`/courses/${courseId}`);
+      return handleApiResponse(response);
+    } catch (error) {
+      return handleApiError(error);
+    }
+  }
 };
 
 export default api;

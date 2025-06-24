@@ -212,7 +212,10 @@ export default {
     async loadStudentRankData(courseId) {
       try {
         const userResponse = await utilityAPI.getUserProfile();
-        if (userResponse.success && userResponse.data.role === "student") {
+        const isStudent =
+          userResponse.success &&
+          (userResponse.data.role === "student" || userResponse.data.user_type === "student");
+        if (isStudent) {
           const studentId = userResponse.data.id;
           const response = await studentPerformanceAPI.getStudentRank(
             studentId,
@@ -249,7 +252,10 @@ export default {
       try {
         // Get user profile first
         const userResponse = await utilityAPI.getUserProfile();
-        if (userResponse.success && userResponse.data.role === "student") {
+        const isStudent =
+          userResponse.success &&
+          (userResponse.data.role === "student" || userResponse.data.user_type === "student");
+        if (isStudent) {
           const studentId = userResponse.data.id;
 
           // Load student breakdown to get enrolled courses
@@ -259,7 +265,7 @@ export default {
 
           if (response.success) {
             const coursesData = response.data.courses || [];
-
+            console.log("Loaded coursesData:", coursesData);
             // Transform API data to match component expectations
             this.enrolledCourses = coursesData.map((course) => ({
               id: course.course_id,
@@ -275,6 +281,7 @@ export default {
               trend: 0, // Will be loaded when course is selected
               assessments: [], // Will be loaded when course is selected
             }));
+            console.log("enrolledCourses after mapping:", this.enrolledCourses);
           }
         }
       } catch (error) {
@@ -288,6 +295,15 @@ export default {
     showError(message) {
       // TODO: Implement proper error handling/notification
       alert(message);
+    },
+  },
+  watch: {
+    enrolledCourses(newCourses) {
+      console.log("Watcher: enrolledCourses changed", newCourses);
+      if (newCourses.length > 0 && !this.selectedCourse) {
+        console.log("Auto-selecting first course:", newCourses[0]);
+        this.selectCourse(newCourses[0]);
+      }
     },
   },
 };

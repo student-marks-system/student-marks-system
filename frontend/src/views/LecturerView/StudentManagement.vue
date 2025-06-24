@@ -13,7 +13,7 @@
         <input v-model="form.email" type="email" placeholder="Email" required />
         <input v-model="form.full_name" placeholder="Full Name" />
         <input
-          v-model="form.password_hash"
+          v-model="form.password"
           type="password"
           placeholder="Password"
           :required="!editingId"
@@ -67,9 +67,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import axios from 'axios'
-
-axios.defaults.baseURL = 'http://localhost:8080'
+import api from '@/services/api'
 
 const students = ref([])
 const editingId = ref(null)
@@ -79,13 +77,13 @@ const form = ref({
   username: '',
   email: '',
   full_name: '',
-  password_hash: '',
+  password: '',
   is_active: true,
 })
 
 const fetchStudents = async () => {
   try {
-    const res = await axios.get('/students')
+    const res = await api.get('students')
     students.value = res.data
   } catch (err) {
     console.error('Fetch Error:', err.message)
@@ -95,12 +93,12 @@ const fetchStudents = async () => {
 const handleSubmit = async () => {
   try {
     if (editingId.value) {
-      await axios.put(`/students/${editingId.value}`, form.value, {
+      await api.put(`students/${editingId.value}`, form.value, {
         headers: { 'Content-Type': 'application/json' },
       })
       successMessage.value = '✅ Student updated successfully.'
     } else {
-      await axios.post('/students', form.value, {
+      await api.post('students', form.value, {
         headers: { 'Content-Type': 'application/json' },
       })
       successMessage.value = '✅ Student added successfully.'
@@ -124,7 +122,7 @@ const editStudent = (student) => {
     username: student.username,
     email: student.email,
     full_name: student.full_name,
-    password_hash: '',
+    password: '',
     is_active: !!student.is_active,
   }
 }
@@ -132,7 +130,7 @@ const editStudent = (student) => {
 const deleteStudent = async (id) => {
   if (confirm('Are you sure you want to delete this student?')) {
     try {
-      await axios.delete(`/students/${id}`)
+      await api.delete(`students/${id}`)
       await fetchStudents()
     } catch (err) {
       console.error('Delete Error:', err.message)
@@ -148,7 +146,7 @@ const resetForm = () => {
     username: '',
     email: '',
     full_name: '',
-    password_hash: '',
+    password: '',
     is_active: true,
   }
 }

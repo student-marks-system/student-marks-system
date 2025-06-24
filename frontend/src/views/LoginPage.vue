@@ -465,7 +465,7 @@ export default {
         admin: "/admin/dashboard",
       };
 
-      const route = routes[role] || "/dashboard";
+      const route = routes[role] || "/student/dashboard";
       this.$router.push(route);
     },
 

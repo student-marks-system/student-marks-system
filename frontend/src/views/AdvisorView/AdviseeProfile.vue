@@ -111,8 +111,8 @@
         :current-gpa="student.currentGPA"
         :total-notes="advisorNotes.length"
         :last-meeting-date="getLastMeetingDate()"
-        :advisor-id="advisorId"
-        :student-id="studentId"
+        :advisor-id="advisorId != null ? String(advisorId) : ''"
+        :student-id="studentId != null ? String(studentId) : ''"
         @close-modal="closeExportReportModal"
         @report-generated="handleReportGenerated"
       />
