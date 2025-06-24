@@ -11,11 +11,11 @@
           <span class="stat-label">Overall Average</span>
         </div>
         <div class="stat-item">
-          <span class="stat-value">#{{ course.yourRank }}</span>
+          <span class="stat-value">#{{ yourRank }}</span>
           <span class="stat-label">Class Rank</span>
         </div>
         <div class="stat-item">
-          <span class="stat-value">{{ course.yourPercentile }}%</span>
+          <span class="stat-value">{{ yourPercentile }}%</span>
           <span class="stat-label">Percentile</span>
         </div>
       </div>
@@ -28,15 +28,15 @@
       </div>
       <div class="card-stats">
         <div class="stat-item">
-          <span class="stat-value">{{ course.classAverage }}%</span>
+          <span class="stat-value">{{ classAverage }}%</span>
           <span class="stat-label">Class Average</span>
         </div>
         <div class="stat-item">
-          <span class="stat-value">{{ course.totalStudents }}</span>
+          <span class="stat-value">{{ totalStudents }}</span>
           <span class="stat-label">Total Students</span>
         </div>
         <div class="stat-item">
-          <span class="stat-value">{{ course.standardDeviation }}%</span>
+          <span class="stat-value">{{ standardDeviation }}%</span>
           <span class="stat-label">Std Deviation</span>
         </div>
       </div>
@@ -49,14 +49,16 @@
       </div>
       <div class="card-stats">
         <div class="stat-item">
-          <span class="stat-value" :class="getTrendClass(course.trend)">
-            {{ course.trend }}%
+          <span class="stat-value" :class="getTrendClass(trend)">
+            {{ trend }}%
           </span>
           <span class="stat-label">Change from Last Assessment</span>
         </div>
         <div class="stat-item">
           <span class="stat-value">
-            {{ getAboveAverageCount() }}/{{ course.assessments.length }}
+            {{ aboveAverageCount }}/{{
+              course.assessments ? course.assessments.length : 0
+            }}
           </span>
           <span class="stat-label">Above Average</span>
         </div>
@@ -74,6 +76,70 @@ export default {
       required: true,
       default: () => ({}),
     },
+    rankData: {
+      type: Object,
+      required: false,
+      default: () => ({}),
+    },
+    classAverages: {
+      type: Object,
+      required: false,
+      default: () => ({}),
+    },
+  },
+  computed: {
+    // Use real data from APIs instead of static course data
+    yourRank() {
+      return this.rankData?.rank || 0;
+    },
+    yourPercentile() {
+      return this.rankData?.percentile || 0;
+    },
+    classAverage() {
+      if (
+        this.classAverages?.class_averages &&
+        this.classAverages.class_averages.length > 0
+      ) {
+        const totalAverage = this.classAverages.class_averages.reduce(
+          (sum, avg) => sum + (avg.average_percentage || 0),
+          0
+        );
+        return (
+          totalAverage / this.classAverages.class_averages.length
+        ).toFixed(1);
+      }
+      return 0;
+    },
+    totalStudents() {
+      return this.rankData?.total_students || 0;
+    },
+    standardDeviation() {
+      // Calculate from class averages if available
+      if (
+        this.classAverages?.class_averages &&
+        this.classAverages.class_averages.length > 0
+      ) {
+        const percentages = this.classAverages.class_averages.map(
+          (avg) => avg.average_percentage || 0
+        );
+        const mean =
+          percentages.reduce((sum, p) => sum + p, 0) / percentages.length;
+        const variance =
+          percentages.reduce((sum, p) => sum + Math.pow(p - mean, 2), 0) /
+          percentages.length;
+        return Math.sqrt(variance).toFixed(1);
+      }
+      return 0;
+    },
+    trend() {
+      // This would need trend data from the API
+      return 0;
+    },
+    aboveAverageCount() {
+      if (!this.course.assessments) return 0;
+      return this.course.assessments.filter((a) => a.yourScore > a.classAverage)
+        .length;
+    },
   },
   methods: {
     getTrendClass(trend) {
@@ -85,9 +151,7 @@ export default {
     },
 
     getAboveAverageCount() {
-      if (!this.course.assessments) return 0;
-      return this.course.assessments.filter((a) => a.yourScore > a.classAverage)
-        .length;
+      return this.aboveAverageCount;
     },
   },
 };

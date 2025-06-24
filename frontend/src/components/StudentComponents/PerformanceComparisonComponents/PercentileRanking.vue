@@ -12,14 +12,12 @@
         <div class="percentile-line">
           <div
             class="percentile-marker your-position"
-            :style="{ left: selectedCourse.yourPercentile + '%' }"
+            :style="{ left: yourPercentile + '%' }"
           >
             <div class="marker-dot"></div>
             <div class="marker-label">
               <span class="marker-text">You</span>
-              <span class="marker-value"
-                >{{ selectedCourse.yourPercentile }}%</span
-              >
+              <span class="marker-value">{{ yourPercentile }}%</span>
             </div>
           </div>
 
@@ -38,13 +36,13 @@
           <div class="breakdown-header">
             <h4>Students Below You</h4>
             <span class="breakdown-count">
-              {{ getStudentsBelowCount() }} students
+              {{ studentsBelowCount }} students
             </span>
           </div>
           <div class="breakdown-bar">
             <div
               class="breakdown-fill below"
-              :style="{ width: selectedCourse.yourPercentile + '%' }"
+              :style="{ width: yourPercentile + '%' }"
             ></div>
           </div>
         </div>
@@ -53,13 +51,13 @@
           <div class="breakdown-header">
             <h4>Students Above You</h4>
             <span class="breakdown-count">
-              {{ getStudentsAboveCount() }} students
+              {{ studentsAboveCount }} students
             </span>
           </div>
           <div class="breakdown-bar">
             <div
               class="breakdown-fill above"
-              :style="{ width: 100 - selectedCourse.yourPercentile + '%' }"
+              :style="{ width: 100 - yourPercentile + '%' }"
             ></div>
           </div>
         </div>
@@ -77,19 +75,34 @@ export default {
       required: true,
       default: () => ({}),
     },
+    rankData: {
+      type: Object,
+      required: false,
+      default: () => ({}),
+    },
+  },
+  computed: {
+    // Use real data from API instead of static course data
+    yourPercentile() {
+      return this.rankData?.percentile || 0;
+    },
+    totalStudents() {
+      return this.rankData?.total_students || 0;
+    },
+    studentsBelowCount() {
+      return Math.floor((this.yourPercentile / 100) * this.totalStudents);
+    },
+    studentsAboveCount() {
+      return this.totalStudents - this.studentsBelowCount - 1;
+    },
   },
   methods: {
     getStudentsBelowCount() {
-      return Math.floor(
-        (this.selectedCourse.yourPercentile / 100) *
-          this.selectedCourse.totalStudents
-      );
+      return this.studentsBelowCount;
     },
 
     getStudentsAboveCount() {
-      return (
-        this.selectedCourse.totalStudents - this.getStudentsBelowCount() - 1
-      );
+      return this.studentsAboveCount;
     },
   },
 };

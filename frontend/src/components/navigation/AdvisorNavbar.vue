@@ -58,7 +58,7 @@
             <router-link
               v-for="student in recentStudents"
               :key="student.id"
-              :to="`/advisor/student/${student.id}`"
+              :to="`/advisor/advisee/${student.id}`"
               class="dropdown-item student-item"
             >
               <div class="student-avatar">
@@ -76,18 +76,6 @@
             </router-link>
           </div>
         </div>
-
-        <router-link
-          to="/advisor/meetings"
-          class="nav-item"
-          :class="{ active: $route.path === '/advisor/meetings' }"
-        >
-          <div class="nav-icon">📅</div>
-          <span class="nav-text">Meetings</span>
-          <span v-if="upcomingMeetings > 0" class="meeting-badge">{{
-            upcomingMeetings
-          }}</span>
-        </router-link>
 
         <router-link
           to="/advisor/analytics"
@@ -135,26 +123,8 @@
         </div>
       </div>
 
-      <!-- Right Side - Quick Actions, Notifications, Profile -->
+      <!-- Right Side - Notifications, Profile -->
       <div class="navbar-right">
-        <!-- Quick Actions -->
-        <div class="quick-actions">
-          <button
-            class="quick-action-btn"
-            @click="scheduleQuickMeeting"
-            title="Schedule Meeting"
-          >
-            📅
-          </button>
-          <button
-            class="quick-action-btn"
-            @click="addQuickNote"
-            title="Add Note"
-          >
-            📝
-          </button>
-        </div>
-
         <!-- Notifications -->
         <div class="notification-dropdown" @click="toggleNotifications">
           <div class="notification-button">
@@ -336,18 +306,6 @@
         </div>
 
         <router-link
-          to="/advisor/meetings"
-          class="mobile-nav-item"
-          @click="closeMobileMenu"
-        >
-          <div class="mobile-nav-icon">📅</div>
-          <span>Meetings</span>
-          <span v-if="upcomingMeetings > 0" class="mobile-meeting-badge">{{
-            upcomingMeetings
-          }}</span>
-        </router-link>
-
-        <router-link
           to="/advisor/analytics"
           class="mobile-nav-item"
           @click="closeMobileMenu"
@@ -414,6 +372,9 @@
 </template>
 
 <script>
+import authService from "@/services/auth";
+import { advisorAPI, utilityAPI } from "@/services/api";
+
 export default {
   name: "AdvisorNavbar",
   data() {
@@ -423,79 +384,14 @@ export default {
       showNotifications: false,
       showProfile: false,
       showMobileMenu: false,
-      advisorName: "Dr. Amanda Wilson",
-      advisorId: "ADV001",
+      advisorName: "",
+      advisorId: "",
       advisorRole: "Academic Advisor",
-      department: "Computer Science",
-      totalAdvisees: 24,
-      atRiskCount: 3,
-      upcomingMeetings: 2,
-      recentStudents: [
-        {
-          id: 1,
-          name: "John Smith",
-          gpa: 3.25,
-        },
-        {
-          id: 2,
-          name: "Emily Davis",
-          gpa: 3.75,
-        },
-        {
-          id: 3,
-          name: "Marcus Johnson",
-          gpa: 2.35,
-        },
-      ],
-      notifications: [
-        {
-          id: 1,
-          type: "alert",
-          priority: "urgent",
-          title: "Student At Risk",
-          message:
-            "Marcus Johnson's GPA has dropped below 2.5. Immediate intervention recommended.",
-          studentName: "Marcus Johnson",
-          timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000),
-          read: false,
-          action: "view_student",
-        },
-        {
-          id: 2,
-          type: "meeting",
-          priority: "normal",
-          title: "Upcoming Meeting",
-          message:
-            "Meeting with Emily Davis scheduled for tomorrow at 2:00 PM.",
-          studentName: "Emily Davis",
-          timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000),
-          read: false,
-          action: "view_meeting",
-        },
-        {
-          id: 3,
-          type: "grade",
-          priority: "normal",
-          title: "Grade Improvement",
-          message:
-            "Sarah Williams showed significant improvement in recent assessments.",
-          studentName: "Sarah Williams",
-          timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000),
-          read: true,
-          action: "view_student",
-        },
-        {
-          id: 4,
-          type: "system",
-          priority: "low",
-          title: "Report Generated",
-          message:
-            "Monthly progress report has been generated for your review.",
-          timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000),
-          read: true,
-          action: "view_reports",
-        },
-      ],
+      department: "",
+      totalAdvisees: 0,
+      atRiskCount: 0,
+      recentStudents: [],
+      notifications: [],
     };
   },
   computed: {
@@ -504,10 +400,7 @@ export default {
     },
 
     isAdviseesActive() {
-      return (
-        this.$route.path.includes("/advisor/advisees") ||
-        this.$route.path.includes("/advisor/student")
-      );
+      return this.$route.path.includes("/advisor/advisee");
     },
 
     isReportsActive() {
@@ -520,8 +413,7 @@ export default {
         .split(" ")
         .map((n) => n[0])
         .join("")
-        .toUpperCase()
-        .replace(/[^A-Z]/g, "");
+        .toUpperCase();
     },
 
     getStudentInitials(name) {
@@ -533,19 +425,17 @@ export default {
     },
 
     getStatusClass(gpa) {
-      if (gpa >= 3.5) return "excellent";
-      if (gpa >= 3.0) return "good";
-      if (gpa >= 2.5) return "average";
-      return "at-risk";
+      if (gpa >= 3.0) return "status-good";
+      if (gpa >= 2.0) return "status-warning";
+      return "status-danger";
     },
 
     getNotificationIcon(type) {
       const icons = {
         alert: "⚠️",
         meeting: "📅",
+        info: "ℹ️",
         grade: "📊",
-        system: "ℹ️",
-        message: "💬",
       };
       return icons[type] || "ℹ️";
     },
@@ -559,6 +449,16 @@ export default {
       if (days > 0) return `${days} day${days > 1 ? "s" : ""} ago`;
       if (hours > 0) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
       return "Just now";
+    },
+
+    toggleAdviseesDropdown() {
+      this.showAdviseesDropdown = !this.showAdviseesDropdown;
+      this.showReportsDropdown = false;
+    },
+
+    toggleReportsDropdown() {
+      this.showReportsDropdown = !this.showReportsDropdown;
+      this.showAdviseesDropdown = false;
     },
 
     toggleNotifications() {
@@ -591,12 +491,9 @@ export default {
               (s) => s.name === notification.studentName
             );
             if (student) {
-              this.$router.push(`/advisor/student/${student.id}`);
+              this.$router.push(`/advisor/advisee/${student.id}`);
             }
           }
-          break;
-        case "view_meeting":
-          this.$router.push("/advisor/meetings");
           break;
         case "view_reports":
           this.$router.push("/advisor/reports");
@@ -620,20 +517,66 @@ export default {
       this.showNotifications = false;
     },
 
-    scheduleQuickMeeting() {
-      this.$router.push("/advisor/schedule-meeting");
+    async logout() {
+      try {
+        // Close any open dropdowns
+        this.showProfile = false;
+        this.showNotifications = false;
+        this.showMobileMenu = false;
+        this.showAdviseesDropdown = false;
+        this.showReportsDropdown = false;
+
+        // Call the auth service logout method
+        await authService.logout();
+
+        // Redirect to login page
+        this.$router.push("/login");
+      } catch (error) {
+        console.error("Logout error:", error);
+        // Even if there's an error, clear local data and redirect
+        authService.clearAuthData();
+        this.$router.push("/login");
+      }
     },
 
-    addQuickNote() {
-      this.$router.push("/advisor/notes/add");
+    async loadAdvisorProfile() {
+      try {
+        const response = await utilityAPI.getUserProfile();
+        if (response.success && response.data.role === "advisor") {
+          this.advisorId = response.data.id;
+          this.advisorName = response.data.full_name || "Advisor";
+          this.department = response.data.department || "";
+        }
+      } catch (error) {
+        console.error("Error loading advisor profile:", error);
+      }
     },
 
-    logout() {
-      // Handle logout logic
-      this.$router.push("/login");
+    async loadAdvisees() {
+      try {
+        if (!this.advisorId) return;
+        const response = await advisorAPI.getAdvisees(this.advisorId);
+        if (response.success && response.data && response.data.advisees) {
+          const advisees = response.data.advisees;
+          this.totalAdvisees = advisees.length;
+          this.atRiskCount = advisees.filter(
+            (a) => a.risk_level === "High" || a.risk_level === "Critical"
+          ).length;
+          // Show up to 3 most recent advisees (sorted by assigned_date desc if available)
+          this.recentStudents = advisees.slice(0, 3).map((a) => ({
+            id: a.id,
+            name: a.full_name,
+            gpa: parseFloat(a.current_gpa) || 0.0,
+          }));
+        }
+      } catch (error) {
+        console.error("Error loading advisees in navbar:", error);
+      }
     },
   },
-  mounted() {
+  async mounted() {
+    await this.loadAdvisorProfile();
+    await this.loadAdvisees();
     // Close dropdowns when clicking outside
     document.addEventListener("click", (event) => {
       if (!this.$el.contains(event.target)) {
@@ -910,19 +853,15 @@ export default {
   font-weight: 600;
 }
 
-.student-status.excellent {
+.student-status.status-good {
   color: #059669;
 }
 
-.student-status.good {
-  color: #3b82f6;
-}
-
-.student-status.average {
+.student-status.status-warning {
   color: #f59e0b;
 }
 
-.student-status.at-risk {
+.student-status.status-danger {
   color: #ef4444;
 }
 
@@ -931,33 +870,6 @@ export default {
   display: flex;
   align-items: center;
   gap: 16px;
-}
-
-/* Quick Actions */
-.quick-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.quick-action-btn {
-  width: 36px;
-  height: 36px;
-  border: none;
-  border-radius: 8px;
-  background: #f8fafc;
-  color: #64748b;
-  font-size: 1.2rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.quick-action-btn:hover {
-  background: #059669;
-  color: white;
-  transform: translateY(-1px);
 }
 
 /* Notifications */

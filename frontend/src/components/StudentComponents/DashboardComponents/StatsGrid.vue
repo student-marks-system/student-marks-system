@@ -6,7 +6,7 @@
         <h3>Overall GPA</h3>
         <p class="stat-value">{{ overallGPA }}</p>
         <span class="stat-change" :class="gpaChangeClass">
-          {{ gpaChange }}
+          {{ formattedGpaChange }}
         </span>
       </div>
     </div>
@@ -77,7 +77,22 @@ export default {
   },
   computed: {
     gpaChangeClass() {
-      return this.gpaChange.startsWith("+") ? "increase" : "decrease";
+      // Make sure gpaChange is a string
+      const change = String(this.gpaChange); // Convert to string
+      if (change.startsWith("+")) {
+        return "positive";
+      } else if (change.startsWith("-")) {
+        return "negative";
+      }
+      return "neutral";
+    },
+
+    formattedGpaChange() {
+      const change = this.gpaChange;
+      if (typeof change === "number") {
+        return change >= 0 ? `+${change.toFixed(2)}` : `${change.toFixed(2)}`;
+      }
+      return change;
     },
   },
 };
@@ -139,14 +154,19 @@ export default {
   border-radius: 12px;
 }
 
-.stat-change.increase {
+.stat-change.positive {
   color: #059669;
   background: #d1fae5;
 }
 
-.stat-change.decrease {
+.stat-change.negative {
   color: #dc2626;
   background: #fee2e2;
+}
+
+.stat-change.neutral {
+  color: #64748b;
+  background: #f1f5f9;
 }
 
 .stat-label {

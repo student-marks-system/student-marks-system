@@ -1,32 +1,46 @@
 <template>
   <div class="course-detail-view">
-    <!-- Course Header -->
-    <CourseHeader :course="course" />
+    <!-- Loading Overlay -->
+    <div v-if="loading" class="loading-overlay">
+      <div class="loading-spinner">Loading course data...</div>
+    </div>
 
-    <!-- Progress Overview -->
-    <ProgressOverview :course="course" />
+    <!-- Error Message -->
+    <div v-if="error" class="error-message">
+      <p>{{ error }}</p>
+      <button @click="loadCourseData">Retry</button>
+    </div>
 
-    <!-- Assessment Components -->
-    <AssessmentsSection
-      :assessments="assessments"
-      :active-filter="activeFilter"
-      @update-filter="updateFilter"
-      @request-remark="requestRemark"
-      @view-assessment-details="viewAssessmentDetails"
-    />
+    <!-- Course Content -->
+    <div v-if="!loading && !error">
+      <!-- Course Header -->
+      <CourseHeader :course="course" />
 
-    <!-- Grade Breakdown Chart -->
-    <GradeBreakdown :weight-categories="weightCategories" />
+      <!-- Progress Overview -->
+      <ProgressOverview :course="course" />
 
-    <!-- Class Performance Comparison -->
-    <ClassPerformanceComparison
-      :top-assessments="topAssessments"
-      :above-average-count="aboveAverageCount"
-      :total-assessments="course.totalAssessments"
-      :percentile-rank="course.percentileRank"
-      :improvement-trend="improvementTrend"
-      :improvement-class="improvementClass"
-    />
+      <!-- Assessment Components -->
+      <AssessmentsSection
+        :assessments="assessments"
+        :active-filter="activeFilter"
+        @update-filter="updateFilter"
+        @request-remark="requestRemark"
+        @view-assessment-details="viewAssessmentDetails"
+      />
+
+      <!-- Grade Breakdown Chart -->
+      <GradeBreakdown :weight-categories="weightCategories" />
+
+      <!-- Class Performance Comparison -->
+      <ClassPerformanceComparison
+        :top-assessments="topAssessments"
+        :above-average-count="aboveAverageCount"
+        :total-assessments="course.totalAssessments"
+        :percentile-rank="course.percentileRank"
+        :improvement-trend="improvementTrend"
+        :improvement-class="improvementClass"
+      />
+    </div>
   </div>
 </template>
 
@@ -37,6 +51,9 @@ import ProgressOverview from "@/components/StudentComponents/CourseDetailViewCom
 import AssessmentsSection from "@/components/StudentComponents/CourseDetailViewComponents/AssessmentsSection.vue";
 import GradeBreakdown from "@/components/StudentComponents/CourseDetailViewComponents/GradeBreakdown.vue";
 import ClassPerformanceComparison from "@/components/StudentComponents/CourseDetailViewComponents/ClassPerformanceComparison.vue";
+
+// Import API services
+import { studentPerformanceAPI, utilityAPI } from "@/services/api";
 
 export default {
   name: "CourseDetailView",
@@ -50,108 +67,26 @@ export default {
   data() {
     return {
       activeFilter: "all",
+      loading: false,
+      error: null,
       course: {
-        id: 1,
-        code: "SECJ3483",
-        name: "Web Technology",
-        credits: 3,
-        semester: "2024/2025-1",
-        currentGrade: "B+",
-        currentMarks: 78.5,
+        id: null,
+        code: "",
+        name: "",
+        credits: 0,
+        semester: "",
+        currentGrade: "N/A",
+        currentMarks: 0,
         totalMarks: 100,
-        classRank: 15,
-        totalStudents: 45,
-        classAverage: 72.3,
-        progressPercentage: 65,
-        completedAssessments: 4,
-        totalAssessments: 6,
-        percentileRank: 67,
+        classRank: 0,
+        totalStudents: 0,
+        classAverage: 0,
+        progressPercentage: 0,
+        completedAssessments: 0,
+        totalAssessments: 0,
+        percentileRank: 0,
       },
-      assessments: [
-        {
-          id: 1,
-          name: "Quiz 1",
-          type: "quiz",
-          weight: 10,
-          maxMarks: 20,
-          marksObtained: 18,
-          dueDate: "2024-09-15",
-          gradedAt: "2024-09-16",
-          description: "HTML and CSS Fundamentals",
-          remarks:
-            "Excellent understanding of CSS selectors. Minor issues with responsive design.",
-          status: "completed",
-        },
-        {
-          id: 2,
-          name: "Assignment 1",
-          type: "assignment",
-          weight: 15,
-          maxMarks: 100,
-          marksObtained: 85,
-          dueDate: "2024-09-25",
-          gradedAt: "2024-09-28",
-          description: "Build a responsive website using HTML/CSS",
-          remarks:
-            "Great work on the layout and styling. The responsive design works well across devices.",
-          status: "completed",
-        },
-        {
-          id: 3,
-          name: "Lab Exercise 1",
-          type: "lab",
-          weight: 5,
-          maxMarks: 50,
-          marksObtained: 45,
-          dueDate: "2024-10-01",
-          gradedAt: "2024-10-02",
-          description: "JavaScript DOM Manipulation",
-          remarks:
-            "Good understanding of DOM events. Consider optimizing your code structure.",
-          status: "completed",
-        },
-        {
-          id: 4,
-          name: "Test 1",
-          type: "test",
-          weight: 20,
-          maxMarks: 100,
-          marksObtained: 78,
-          dueDate: "2024-10-10",
-          gradedAt: "2024-10-12",
-          description:
-            "Mid-semester examination covering HTML, CSS, JavaScript",
-          remarks:
-            "Solid performance overall. Review JavaScript async concepts for improvement.",
-          status: "completed",
-        },
-        {
-          id: 5,
-          name: "Assignment 2",
-          type: "assignment",
-          weight: 20,
-          maxMarks: 100,
-          marksObtained: null,
-          dueDate: "2024-11-15",
-          gradedAt: null,
-          description: "Full-stack web application using PHP and MySQL",
-          remarks: null,
-          status: "pending",
-        },
-        {
-          id: 6,
-          name: "Final Exam",
-          type: "final_exam",
-          weight: 30,
-          maxMarks: 100,
-          marksObtained: null,
-          dueDate: "2024-12-15",
-          gradedAt: null,
-          description: "Comprehensive final examination",
-          remarks: null,
-          status: "pending",
-        },
-      ],
+      assessments: [],
     };
   },
   computed: {
@@ -269,6 +204,18 @@ export default {
         : "improvement-negative";
     },
   },
+  watch: {
+    // Watch for route parameter changes to reload data when navigating between courses
+    "$route.params.courseId": {
+      handler(newCourseId, oldCourseId) {
+        if (newCourseId !== oldCourseId) {
+          console.log("Course ID changed from", oldCourseId, "to", newCourseId);
+          this.loadCourseData();
+        }
+      },
+      immediate: true,
+    },
+  },
   methods: {
     updateFilter(filterKey) {
       this.activeFilter = filterKey;
@@ -285,15 +232,92 @@ export default {
     },
 
     async loadCourseData() {
+      this.loading = true;
+      this.error = null;
+
       try {
-        // TODO: Replace with actual API calls
-        // const courseId = this.$route.params.id;
-        // const response = await this.$http.get(`/api/courses/${courseId}/details`);
-        // this.course = response.data.course;
-        // this.assessments = response.data.assessments;
+        const courseId = this.$route.params.courseId;
+        console.log("Loading course data for courseId:", courseId);
+
+        if (!courseId) {
+          this.error = "No course ID provided";
+          return;
+        }
+
+        // Get user profile to get student ID
+        const userResponse = await utilityAPI.getUserProfile();
+        console.log("User profile response:", userResponse);
+
+        if (!userResponse.success) {
+          this.error = "Failed to get user profile";
+          return;
+        }
+
+        const studentId = userResponse.data.id;
+        console.log("Student ID:", studentId);
+
+        // Load course-specific data
+        const response = await studentPerformanceAPI.getStudentCourseMarks(
+          studentId,
+          courseId
+        );
+
+        console.log("Course marks response:", response);
+
+        if (response.success) {
+          const data = response.data;
+          console.log("Course data:", data);
+
+          // Update course information
+          this.course = {
+            id: courseId,
+            code: data.course.course_code,
+            name: data.course.course_name,
+            credits: 3, // Default value - could be fetched from course details
+            semester: "2024/2025-1", // Default value - could be fetched from course details
+            currentGrade: data.summary.grade_letter || "N/A",
+            currentMarks: data.summary.overall_percentage || 0,
+            totalMarks: 100,
+            classRank: 15, // Placeholder - could be calculated from backend
+            totalStudents: 45, // Placeholder - could be calculated from backend
+            classAverage: 75, // Placeholder - could be calculated from backend
+            progressPercentage: data.summary.overall_percentage || 0,
+            completedAssessments: data.components.filter(
+              (c) => c.marks_obtained !== null
+            ).length,
+            totalAssessments: data.components.length,
+            percentileRank: 67, // Placeholder - could be calculated from backend
+          };
+
+          console.log("Updated course object:", this.course);
+
+          // Transform assessment components to match component expectations
+          this.assessments = data.components.map((component) => ({
+            id: component.component_id,
+            name: component.component_name,
+            type: component.component_type,
+            weight: component.weight_percentage,
+            maxMarks: component.max_marks,
+            marksObtained: component.marks_obtained,
+            dueDate: component.graded_at
+              ? new Date(component.graded_at).toISOString().split("T")[0]
+              : null,
+            gradedAt: component.graded_at,
+            description: `${component.component_type} assessment`,
+            remarks: component.remarks,
+            status: component.marks_obtained !== null ? "completed" : "pending",
+          }));
+
+          console.log("Updated assessments array:", this.assessments);
+        } else {
+          this.error = "Failed to load course data";
+          console.error("API response not successful:", response);
+        }
       } catch (error) {
         console.error("Error loading course data:", error);
-        this.showError("Failed to load course data");
+        this.error = "Failed to load course data";
+      } finally {
+        this.loading = false;
       }
     },
 
@@ -314,6 +338,61 @@ export default {
   padding: 20px;
   background-color: #f8fafc;
   min-height: 100vh;
+  position: relative;
+}
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.loading-spinner {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  font-size: 1.1rem;
+  color: #3b82f6;
+  font-weight: 600;
+}
+
+.error-message {
+  background: white;
+  border: 1px solid #ef4444;
+  border-radius: 12px;
+  padding: 24px;
+  margin: 20px;
+  text-align: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.error-message p {
+  color: #ef4444;
+  margin: 0 0 16px 0;
+  font-weight: 600;
+}
+
+.error-message button {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.error-message button:hover {
+  background: #dc2626;
 }
 
 /* Global responsive adjustments */

@@ -58,7 +58,7 @@
         </div>
 
         <router-link
-          to="/student/PerformanceComparison"
+          to="/student/performance-comparison"
           class="nav-item"
           :class="{ active: $route.path === '/student/performance-comparison' }"
         >
@@ -67,7 +67,7 @@
         </router-link>
 
         <router-link
-          to="/student/PerformanceTrends"
+          to="/student/performance-trends"
           class="nav-item"
           :class="{ active: $route.path === '/student/performance-trends' }"
         >
@@ -76,7 +76,7 @@
         </router-link>
 
         <router-link
-          to="/student/WhatIfSimulator"
+          to="/student/what-if-simulator"
           class="nav-item"
           :class="{ active: $route.path === '/student/what-if-simulator' }"
         >
@@ -299,6 +299,9 @@
 </template>
 
 <script>
+import authService from "@/services/auth";
+import { studentPerformanceAPI, utilityAPI } from "@/services/api";
+
 export default {
   name: "StudentNavbar",
   data() {
@@ -307,29 +310,10 @@ export default {
       showNotifications: false,
       showProfile: false,
       showMobileMenu: false,
-      studentName: "John Smith",
-      studentId: "A20CS1001",
-      studentProgram: "Computer Science",
-      enrolledCourses: [
-        {
-          id: 1,
-          code: "SECJ3483",
-          name: "Web Technology",
-          currentGrade: "B+",
-        },
-        {
-          id: 2,
-          code: "SECJ2203",
-          name: "Database Systems",
-          currentGrade: "A-",
-        },
-        {
-          id: 3,
-          code: "SECJ3103",
-          name: "Software Engineering",
-          currentGrade: "B",
-        },
-      ],
+      studentName: "Loading...",
+      studentId: "Loading...",
+      studentProgram: "Loading...",
+      enrolledCourses: [],
       notifications: [
         {
           id: 1,
@@ -367,7 +351,65 @@ export default {
       return this.$route.path.includes("/student/course");
     },
   },
+  async mounted() {
+    await this.loadStudentData();
+
+    // Close dropdowns when clicking outside
+    document.addEventListener("click", (event) => {
+      if (!this.$el.contains(event.target)) {
+        this.showNotifications = false;
+        this.showProfile = false;
+        this.showCoursesDropdown = false;
+      }
+    });
+  },
   methods: {
+    async loadStudentData() {
+      try {
+        // Get user profile first
+        const userResponse = await utilityAPI.getUserProfile();
+        if (userResponse.success) {
+          const userData = userResponse.data;
+
+          // Update student info
+          this.studentName = userData.full_name || "Student";
+          this.studentId = userData.username || "N/A";
+          this.studentProgram = "Computer Science"; // Could be fetched from backend
+
+          // Load enrolled courses
+          if (userData.role === "student") {
+            await this.loadEnrolledCourses(userData.id);
+          }
+        }
+      } catch (error) {
+        console.error("Error loading student data for navbar:", error);
+      }
+    },
+
+    async loadEnrolledCourses(studentId) {
+      try {
+        const response = await studentPerformanceAPI.getStudentFullBreakdown(
+          studentId
+        );
+
+        if (response.success) {
+          const coursesData = response.data.courses || [];
+
+          // Transform API data to match navbar expectations
+          this.enrolledCourses = coursesData.map((course) => ({
+            id: course.course_id,
+            code: course.course_code,
+            name: course.course_name,
+            currentGrade: course.grade_letter || "N/A",
+          }));
+        }
+      } catch (error) {
+        console.error("Error loading enrolled courses for navbar:", error);
+        // Keep empty array if API fails
+        this.enrolledCourses = [];
+      }
+    },
+
     getStudentInitials(name) {
       return name
         .split(" ")
@@ -443,20 +485,40 @@ export default {
       this.showNotifications = false;
     },
 
-    logout() {
-      // Handle logout logic
-      this.$router.push("/login");
-    },
-  },
-  mounted() {
-    // Close dropdowns when clicking outside
-    document.addEventListener("click", (event) => {
-      if (!this.$el.contains(event.target)) {
-        this.showNotifications = false;
+    async logout() {
+      try {
+        console.log("Starting logout process...");
+        console.log(
+          "Before logout - isAuthenticated:",
+          authService.isAuthenticated()
+        );
+        console.log("Before logout - token:", authService.getToken());
+        console.log("Before logout - user:", authService.getCurrentUser());
+
+        // Close any open dropdowns
         this.showProfile = false;
-        this.showCoursesDropdown = false;
+        this.showNotifications = false;
+        this.showMobileMenu = false;
+
+        // Call the auth service logout method
+        await authService.logout();
+
+        console.log(
+          "After logout - isAuthenticated:",
+          authService.isAuthenticated()
+        );
+        console.log("After logout - token:", authService.getToken());
+        console.log("After logout - user:", authService.getCurrentUser());
+
+        // Redirect to login page
+        this.$router.push("/login");
+      } catch (error) {
+        console.error("Logout error:", error);
+        // Even if there's an error, clear local data and redirect
+        authService.clearAuthData();
+        this.$router.push("/login");
       }
-    });
+    },
   },
 };
 </script>

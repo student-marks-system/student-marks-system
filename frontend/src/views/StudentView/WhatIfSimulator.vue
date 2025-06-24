@@ -1,5 +1,16 @@
 <template>
   <div class="what-if-simulator">
+    <!-- Loading Overlay -->
+    <div v-if="loading" class="loading-overlay">
+      <div class="loading-spinner">Loading simulator data...</div>
+    </div>
+
+    <!-- Error Message -->
+    <div v-if="error" class="error-message">
+      <p>{{ error }}</p>
+      <button @click="retryLoadData">Retry</button>
+    </div>
+
     <!-- Header -->
     <SimulatorHeader />
 
@@ -51,6 +62,24 @@
 
     <!-- No Course Selected State -->
     <NoCourseSelected v-else />
+
+    <!-- No Data Message -->
+    <div
+      v-if="enrolledCourses.length === 0 && !loading"
+      class="no-data-message"
+    >
+      <div class="no-data-content">
+        <div class="no-data-icon">📊</div>
+        <h3>No Courses Available</h3>
+        <p>
+          You need to be enrolled in courses with assessment components to use
+          the grade simulator.
+        </p>
+        <div class="no-data-actions">
+          <button @click="retryLoadData" class="retry-btn">Refresh Data</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -64,6 +93,9 @@ import ScenarioAnalysis from "@/components/StudentComponents/WhatIfSimulatorComp
 import GradeBreakdownVisualization from "@/components/StudentComponents/WhatIfSimulatorComponents/GradeBreakdownVisualization.vue";
 import RecommendationsSection from "@/components/StudentComponents/WhatIfSimulatorComponents/RecommendationsSection.vue";
 import NoCourseSelected from "@/components/StudentComponents/WhatIfSimulatorComponents/NoCourseSelected.vue";
+
+// Import API services
+import { studentPerformanceAPI, utilityAPI } from "@/services/api";
 
 export default {
   name: "WhatIfSimulator",
@@ -79,237 +111,26 @@ export default {
   },
   data() {
     return {
+      loading: false,
+      error: null,
       selectedCourse: null,
       selectedGoal: null,
-      enrolledCourses: [
-        {
-          id: 1,
-          code: "SECJ3483",
-          name: "Web Technology",
-          currentGrade: "B+",
-          currentMarks: 78.5,
-          completedWeight: 50,
-          assessments: [
-            {
-              id: 1,
-              name: "Quiz 1",
-              type: "quiz",
-              weight: 10,
-              maxScore: 20,
-              actualScore: 18,
-              completed: true,
-              dueDate: null,
-              description: "HTML and CSS Fundamentals",
-            },
-            {
-              id: 2,
-              name: "Assignment 1",
-              type: "assignment",
-              weight: 15,
-              maxScore: 100,
-              actualScore: 85,
-              completed: true,
-              dueDate: null,
-              description: "Responsive Website Design",
-            },
-            {
-              id: 3,
-              name: "Lab Exercise 1",
-              type: "lab",
-              weight: 5,
-              maxScore: 50,
-              actualScore: 45,
-              completed: true,
-              dueDate: null,
-              description: "JavaScript DOM Manipulation",
-            },
-            {
-              id: 4,
-              name: "Test 1",
-              type: "test",
-              weight: 20,
-              maxScore: 100,
-              actualScore: 78,
-              completed: true,
-              dueDate: null,
-              description: "Mid-semester Examination",
-            },
-            {
-              id: 5,
-              name: "Assignment 2",
-              type: "assignment",
-              weight: 20,
-              maxScore: 100,
-              predictedScore: 80,
-              completed: false,
-              dueDate: "2024-11-15",
-              description: "Full-stack Web Application",
-            },
-            {
-              id: 6,
-              name: "Final Exam",
-              type: "final_exam",
-              weight: 30,
-              maxScore: 100,
-              predictedScore: 75,
-              completed: false,
-              dueDate: "2024-12-15",
-              description: "Comprehensive Final Examination",
-            },
-          ],
-        },
-        {
-          id: 2,
-          code: "SECJ2203",
-          name: "Database Systems",
-          currentGrade: "A-",
-          currentMarks: 85.2,
-          completedWeight: 40,
-          assessments: [
-            {
-              id: 7,
-              name: "Quiz 1",
-              type: "quiz",
-              weight: 10,
-              maxScore: 20,
-              actualScore: 19,
-              completed: true,
-              dueDate: null,
-              description: "Database Fundamentals",
-            },
-            {
-              id: 8,
-              name: "Assignment 1",
-              type: "assignment",
-              weight: 20,
-              maxScore: 100,
-              actualScore: 88,
-              completed: true,
-              dueDate: null,
-              description: "ER Diagram Design",
-            },
-            {
-              id: 9,
-              name: "Lab Exercise 1",
-              type: "lab",
-              weight: 10,
-              maxScore: 100,
-              actualScore: 92,
-              completed: true,
-              dueDate: null,
-              description: "SQL Queries",
-            },
-            {
-              id: 10,
-              name: "Test 1",
-              type: "test",
-              weight: 25,
-              maxScore: 100,
-              predictedScore: 85,
-              completed: false,
-              dueDate: "2024-11-20",
-              description: "Database Design and Normalization",
-            },
-            {
-              id: 11,
-              name: "Final Project",
-              type: "assignment",
-              weight: 25,
-              maxScore: 100,
-              predictedScore: 90,
-              completed: false,
-              dueDate: "2024-12-10",
-              description: "Database Application Development",
-            },
-            {
-              id: 12,
-              name: "Final Exam",
-              type: "final_exam",
-              weight: 10,
-              maxScore: 100,
-              predictedScore: 80,
-              completed: false,
-              dueDate: "2024-12-18",
-              description: "Comprehensive Final Examination",
-            },
-          ],
-        },
-        {
-          id: 3,
-          code: "SECJ3103",
-          name: "Software Engineering",
-          currentGrade: "B",
-          currentMarks: 72.0,
-          completedWeight: 35,
-          assessments: [
-            {
-              id: 13,
-              name: "Quiz 1",
-              type: "quiz",
-              weight: 15,
-              maxScore: 20,
-              actualScore: 14,
-              completed: true,
-              dueDate: null,
-              description: "Software Development Life Cycle",
-            },
-            {
-              id: 14,
-              name: "Assignment 1",
-              type: "assignment",
-              weight: 20,
-              maxScore: 100,
-              actualScore: 75,
-              completed: true,
-              dueDate: null,
-              description: "Requirements Analysis",
-            },
-            {
-              id: 15,
-              name: "Test 1",
-              type: "test",
-              weight: 30,
-              maxScore: 100,
-              predictedScore: 75,
-              completed: false,
-              dueDate: "2024-11-25",
-              description: "Design Patterns and Architecture",
-            },
-            {
-              id: 16,
-              name: "Final Project",
-              type: "assignment",
-              weight: 25,
-              maxScore: 100,
-              predictedScore: 80,
-              completed: false,
-              dueDate: "2024-12-05",
-              description: "Software Development Project",
-            },
-            {
-              id: 17,
-              name: "Final Exam",
-              type: "final_exam",
-              weight: 10,
-              maxScore: 100,
-              predictedScore: 70,
-              completed: false,
-              dueDate: "2024-12-20",
-              description: "Comprehensive Final Examination",
-            },
-          ],
-        },
-      ],
+      enrolledCourses: [],
+      studentInfo: {
+        id: null,
+        name: "",
+        matricNumber: "",
+      },
     };
   },
   computed: {
     projectedGrade() {
-      if (!this.selectedCourse)
+      if (!this.selectedCourse || !this.selectedCourse.assessments)
         return { letter: "N/A", percentage: 0, status: "", trend: "" };
 
       const totalScore = this.calculateTotalScore();
       const letter = this.getLetterGrade(totalScore);
-      const current = this.selectedCourse.currentMarks;
+      const current = this.selectedCourse.currentMarks || 0;
 
       let status = "";
       let trend = "";
@@ -334,7 +155,7 @@ export default {
     },
 
     gradeGoals() {
-      if (!this.selectedCourse) return [];
+      if (!this.selectedCourse || !this.selectedCourse.assessments) return [];
 
       const goals = [
         { grade: "A+", minScore: 90 },
@@ -358,7 +179,7 @@ export default {
     },
 
     scenarios() {
-      if (!this.selectedCourse) return {};
+      if (!this.selectedCourse || !this.selectedCourse.assessments) return {};
 
       return {
         bestCase: this.calculateBestCase(),
@@ -368,7 +189,7 @@ export default {
     },
 
     gradeBreakdown() {
-      if (!this.selectedCourse) return [];
+      if (!this.selectedCourse || !this.selectedCourse.assessments) return [];
 
       return this.selectedCourse.assessments.map((assessment) => {
         const score = assessment.completed
@@ -385,21 +206,21 @@ export default {
     },
 
     completedWeight() {
-      if (!this.selectedCourse) return 0;
+      if (!this.selectedCourse || !this.selectedCourse.assessments) return 0;
       return this.selectedCourse.assessments
         .filter((a) => a.completed)
         .reduce((sum, a) => sum + a.weight, 0);
     },
 
     currentContribution() {
-      if (!this.selectedCourse) return 0;
+      if (!this.selectedCourse || !this.selectedCourse.assessments) return 0;
       return this.selectedCourse.assessments
         .filter((a) => a.completed)
         .reduce((sum, a) => sum + (a.actualScore / a.maxScore) * a.weight, 0);
     },
 
     projectedContribution() {
-      if (!this.selectedCourse) return 0;
+      if (!this.selectedCourse || !this.selectedCourse.assessments) return 0;
       return this.selectedCourse.assessments
         .filter((a) => !a.completed)
         .reduce(
@@ -409,7 +230,7 @@ export default {
     },
 
     recommendations() {
-      if (!this.selectedCourse) return [];
+      if (!this.selectedCourse || !this.selectedCourse.assessments) return [];
 
       const recommendations = [];
       const totalScore = this.calculateTotalScore();
@@ -480,8 +301,102 @@ export default {
     },
   },
   methods: {
-    selectCourse(course) {
+    async loadStudentInfo() {
+      try {
+        const response = await utilityAPI.getUserProfile();
+        if (response.success) {
+          const userData = response.data;
+          this.studentInfo = {
+            id: userData.id,
+            name: userData.full_name || "Student",
+            matricNumber: userData.username || "",
+          };
+          console.log("Loaded student info:", this.studentInfo);
+        } else {
+          console.error("Failed to load student info:", response.message);
+        }
+      } catch (error) {
+        console.error("Error loading student info:", error);
+      }
+    },
+
+    async loadEnrolledCourses() {
+      try {
+        if (!this.studentInfo.id) return;
+
+        const response = await studentPerformanceAPI.getStudentFullBreakdown(
+          this.studentInfo.id
+        );
+
+        if (response.success) {
+          const coursesData = response.data.courses || [];
+          this.enrolledCourses = coursesData.map((course) => ({
+            id: course.course_id,
+            code: course.course_code,
+            name: course.course_name,
+            currentGrade: course.grade_letter || "N/A",
+            currentMarks: course.overall_percentage || 0,
+            completedWeight: course.progress || 0,
+            assessments: [], // Will be loaded separately
+          }));
+          console.log("Loaded enrolled courses:", this.enrolledCourses);
+        } else {
+          console.error("Failed to load enrolled courses:", response.message);
+        }
+      } catch (error) {
+        console.error("Error loading enrolled courses:", error);
+      }
+    },
+
+    async loadCourseAssessments(courseId) {
+      try {
+        const response = await studentPerformanceAPI.getStudentCourseMarks(
+          this.studentInfo.id,
+          courseId
+        );
+
+        if (response.success) {
+          const components = response.data.components || [];
+          return components.map((component) => ({
+            id: component.component_id,
+            name: component.component_name,
+            type: component.component_type,
+            weight: component.weight_percentage,
+            maxScore: component.max_marks,
+            actualScore: component.marks_obtained,
+            completed: component.marks_obtained !== null,
+            dueDate: component.graded_at
+              ? new Date(component.graded_at).toISOString().split("T")[0]
+              : null,
+            description: component.component_name,
+            predictedScore: component.marks_obtained || 0, // Default to actual score or 0
+          }));
+        } else {
+          console.error("Failed to load course assessments:", response.message);
+          return [];
+        }
+      } catch (error) {
+        console.error("Error loading course assessments:", error);
+        return [];
+      }
+    },
+
+    async selectCourse(course) {
       this.selectedCourse = { ...course };
+
+      // Load assessment components for the selected course
+      if (this.selectedCourse && this.selectedCourse.id) {
+        const assessments = await this.loadCourseAssessments(
+          this.selectedCourse.id
+        );
+        this.selectedCourse.assessments = assessments;
+        console.log(
+          "Loaded assessments for course:",
+          this.selectedCourse.id,
+          assessments
+        );
+      }
+
       this.updateProjections();
     },
 
@@ -490,7 +405,7 @@ export default {
     },
 
     calculateTotalScore() {
-      if (!this.selectedCourse) return 0;
+      if (!this.selectedCourse || !this.selectedCourse.assessments) return 0;
 
       let totalScore = 0;
 
@@ -534,7 +449,7 @@ export default {
     },
 
     resetToActual() {
-      if (!this.selectedCourse) return;
+      if (!this.selectedCourse || !this.selectedCourse.assessments) return;
 
       this.selectedCourse.assessments.forEach((assessment) => {
         if (!assessment.completed) {
@@ -545,7 +460,7 @@ export default {
     },
 
     fillOptimistic() {
-      if (!this.selectedCourse) return;
+      if (!this.selectedCourse || !this.selectedCourse.assessments) return;
 
       this.selectedCourse.assessments.forEach((assessment) => {
         if (!assessment.completed) {
@@ -556,7 +471,7 @@ export default {
     },
 
     fillRealistic() {
-      if (!this.selectedCourse) return;
+      if (!this.selectedCourse || !this.selectedCourse.assessments) return;
 
       this.selectedCourse.assessments.forEach((assessment) => {
         if (!assessment.completed) {
@@ -567,7 +482,7 @@ export default {
     },
 
     fillConservative() {
-      if (!this.selectedCourse) return;
+      if (!this.selectedCourse || !this.selectedCourse.assessments) return;
 
       this.selectedCourse.assessments.forEach((assessment) => {
         if (!assessment.completed) {
@@ -578,7 +493,7 @@ export default {
     },
 
     calculateBestCase() {
-      if (!this.selectedCourse) return {};
+      if (!this.selectedCourse || !this.selectedCourse.assessments) return {};
 
       // Calculate assuming 95% on all remaining assessments
       let totalScore = this.currentContribution;
@@ -604,12 +519,24 @@ export default {
     },
 
     calculateRealisticCase() {
-      if (!this.selectedCourse) return {};
+      if (!this.selectedCourse || !this.selectedCourse.assessments) return {};
 
       // Calculate based on current trend (average of completed assessments)
       const completedAssessments = this.selectedCourse.assessments.filter(
         (a) => a.completed
       );
+
+      if (completedAssessments.length === 0) {
+        return {
+          grade: "N/A",
+          percentage: "0.0",
+          description: "No completed assessments to base prediction on",
+          requirements: [
+            "Complete at least one assessment to see realistic predictions",
+          ],
+        };
+      }
+
       const averagePerformance =
         completedAssessments.reduce(
           (sum, a) => sum + a.actualScore / a.maxScore,
@@ -640,7 +567,7 @@ export default {
     },
 
     calculateWorstCase() {
-      if (!this.selectedCourse) return {};
+      if (!this.selectedCourse || !this.selectedCourse.assessments) return {};
 
       // Calculate assuming 50% on all remaining assessments
       let totalScore = this.currentContribution;
@@ -666,7 +593,7 @@ export default {
     },
 
     getAssessmentTypeAverage(type) {
-      if (!this.selectedCourse) return 0;
+      if (!this.selectedCourse || !this.selectedCourse.assessments) return 0;
 
       const assessments = this.selectedCourse.assessments.filter(
         (a) => a.type === type && a.completed
@@ -711,18 +638,26 @@ export default {
 
     async loadSimulatorData() {
       try {
-        // TODO: Replace with actual API calls
-        // const response = await this.$http.get('/api/student/simulator-data');
-        // this.enrolledCourses = response.data;
+        this.loading = true;
+        this.error = null;
+
+        await this.loadStudentInfo();
+        await this.loadEnrolledCourses();
+
+        // Auto-select first course if available
+        if (this.enrolledCourses.length > 0) {
+          await this.selectCourse(this.enrolledCourses[0]);
+        }
       } catch (error) {
         console.error("Error loading simulator data:", error);
-        this.showError("Failed to load simulator data");
+        this.error = "Failed to load simulator data. Please try again later.";
+      } finally {
+        this.loading = false;
       }
     },
 
-    showError(message) {
-      // TODO: Implement proper error handling/notification
-      alert(message);
+    retryLoadData() {
+      this.loadSimulatorData();
     },
   },
   async mounted() {
@@ -746,6 +681,114 @@ export default {
 
 .simulator-content {
   /* Main content styles if needed */
+}
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.loading-spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.error-message {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background-color: #ffcccc;
+  padding: 10px;
+  z-index: 1000;
+}
+
+.error-message p {
+  margin: 0;
+  color: #ff0000;
+}
+
+.error-message button {
+  background-color: #3498db;
+  color: #fff;
+  border: none;
+  padding: 5px 10px;
+  margin-top: 10px;
+  cursor: pointer;
+}
+
+.no-data-message {
+  background: white;
+  border-radius: 12px;
+  padding: 60px 30px;
+  margin: 30px 0;
+  text-align: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.no-data-content {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.no-data-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+  opacity: 0.6;
+}
+
+.no-data-content h3 {
+  margin: 0 0 16px 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.no-data-content p {
+  margin: 0 0 24px 0;
+  color: #64748b;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.no-data-actions {
+  margin-top: 20px;
+}
+
+.retry-btn {
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.2s;
+}
+
+.retry-btn:hover {
+  background-color: #2563eb;
 }
 
 /* Global responsive adjustments */

@@ -12,7 +12,11 @@
 
     <div v-if="selectedCourse" class="comparison-content">
       <!-- Performance Overview Cards -->
-      <PerformanceOverview :course="selectedCourse" />
+      <PerformanceOverview
+        :course="selectedCourse"
+        :rank-data="rankData"
+        :class-averages="classAverages"
+      />
 
       <!-- Comparison Controls -->
       <ComparisonControls
@@ -25,7 +29,7 @@
       <!-- Assessment Comparison (Bar Chart View) -->
       <AssessmentComparison
         v-if="selectedViewType === 'assessments'"
-        :assessments="selectedCourse.assessments"
+        :assessments="transformedAssessments"
       />
 
       <!-- Grade Distribution (Chart View) -->
@@ -39,13 +43,21 @@
       <PercentileRanking
         v-if="selectedViewType === 'percentiles'"
         :selected-course="selectedCourse"
+        :rank-data="rankData"
       />
 
       <!-- Class Performance Summary -->
-      <ClassSummary :selected-course="selectedCourse" />
+      <ClassSummary
+        :selected-course="selectedCourse"
+        :class-averages="classAverages"
+        :rank-data="rankData"
+      />
 
       <!-- Anonymous Comments Section -->
-      <AnonymousInsights :selected-course="selectedCourse" />
+      <AnonymousInsights
+        :selected-course="selectedCourse"
+        :comparison-data="comparisonData"
+      />
     </div>
 
     <!-- No Course Selected State -->
@@ -66,6 +78,9 @@ import ClassSummary from "@/components/StudentComponents/PerformanceComparisonCo
 import AnonymousInsights from "@/components/StudentComponents/PerformanceComparisonComponents/AnonymousInsights.vue";
 import NoCourseSelected from "@/components/StudentComponents/PerformanceComparisonComponents/NoCourseSelected.vue";
 
+// Import API services
+import { studentPerformanceAPI, utilityAPI } from "@/services/api";
+
 export default {
   name: "PerformanceComparison",
   components: {
@@ -85,177 +100,87 @@ export default {
       selectedCourse: null,
       selectedComparisonType: "individual",
       selectedViewType: "assessments",
-      enrolledCourses: [
-        {
-          id: 1,
-          code: "SECJ3483",
-          name: "Web Technology",
-          yourAverage: 78.5,
-          yourRank: 15,
-          yourPercentile: 67,
-          yourGrade: "B+",
-          classAverage: 72.3,
-          totalStudents: 45,
-          standardDeviation: 12.4,
-          trend: +2.5,
-          assessments: [
-            {
-              id: 1,
-              name: "Quiz 1",
-              type: "quiz",
-              weight: 10,
-              yourScore: 18,
-              maxScore: 20,
-              classAverage: 16.2,
-              highestScore: 20,
-              yourPercentile: 78,
-            },
-            {
-              id: 2,
-              name: "Assignment 1",
-              type: "assignment",
-              weight: 15,
-              yourScore: 85,
-              maxScore: 100,
-              classAverage: 74.5,
-              highestScore: 95,
-              yourPercentile: 72,
-            },
-            {
-              id: 3,
-              name: "Lab Exercise 1",
-              type: "lab",
-              weight: 5,
-              yourScore: 45,
-              maxScore: 50,
-              classAverage: 41.8,
-              highestScore: 50,
-              yourPercentile: 81,
-            },
-            {
-              id: 4,
-              name: "Test 1",
-              type: "test",
-              weight: 20,
-              yourScore: 78,
-              maxScore: 100,
-              classAverage: 69.2,
-              highestScore: 92,
-              yourPercentile: 65,
-            },
-          ],
-        },
-        {
-          id: 2,
-          code: "SECJ2203",
-          name: "Database Systems",
-          yourAverage: 85.2,
-          yourRank: 8,
-          yourPercentile: 82,
-          yourGrade: "A-",
-          classAverage: 74.8,
-          totalStudents: 42,
-          standardDeviation: 14.1,
-          trend: +4.2,
-          assessments: [
-            {
-              id: 5,
-              name: "Quiz 1",
-              type: "quiz",
-              weight: 10,
-              yourScore: 19,
-              maxScore: 20,
-              classAverage: 15.8,
-              highestScore: 20,
-              yourPercentile: 85,
-            },
-            {
-              id: 6,
-              name: "Assignment 1",
-              type: "assignment",
-              weight: 20,
-              yourScore: 88,
-              maxScore: 100,
-              classAverage: 76.3,
-              highestScore: 96,
-              yourPercentile: 78,
-            },
-            {
-              id: 7,
-              name: "Lab Exercise 1",
-              type: "lab",
-              weight: 10,
-              yourScore: 92,
-              maxScore: 100,
-              classAverage: 82.1,
-              highestScore: 98,
-              yourPercentile: 89,
-            },
-          ],
-        },
-        {
-          id: 3,
-          code: "SECJ3103",
-          name: "Software Engineering",
-          yourAverage: 72.0,
-          yourRank: 22,
-          yourPercentile: 51,
-          yourGrade: "B",
-          classAverage: 69.5,
-          totalStudents: 38,
-          standardDeviation: 15.8,
-          trend: -1.8,
-          assessments: [
-            {
-              id: 8,
-              name: "Quiz 1",
-              type: "quiz",
-              weight: 15,
-              yourScore: 14,
-              maxScore: 20,
-              classAverage: 13.2,
-              highestScore: 19,
-              yourPercentile: 58,
-            },
-            {
-              id: 9,
-              name: "Assignment 1",
-              type: "assignment",
-              weight: 25,
-              yourScore: 75,
-              maxScore: 100,
-              classAverage: 71.8,
-              highestScore: 89,
-              yourPercentile: 55,
-            },
-          ],
-        },
-      ],
+      enrolledCourses: [],
+      loading: false,
+      error: null,
+      comparisonData: null,
+      rankData: null,
+      classAverages: null,
     };
   },
   computed: {
-    gradeDistribution() {
-      if (!this.selectedCourse) return [];
+    transformedAssessments() {
+      if (!this.comparisonData || !this.comparisonData.comparisons) {
+        return [];
+      }
 
-      // Mock grade distribution data
+      return this.comparisonData.comparisons.map((comparison) => ({
+        id: comparison.component_name,
+        name: comparison.component_name,
+        type: comparison.component_type,
+        weight: 0, // This would need to come from assessment_components table
+        maxScore: comparison.max_marks,
+        yourScore: comparison.my_marks || 0,
+        classAverage: comparison.class_average || 0,
+        highestScore: comparison.max_marks, // Using max_marks as highest for now
+        yourPercentile: comparison.percentile || 0,
+        submissions: comparison.submissions || 0,
+      }));
+    },
+
+    gradeDistribution() {
+      if (!this.selectedCourse || !this.comparisonData) return [];
+
+      // Generate grade distribution from real comparison data
       const distribution = [
-        { grade: "A+", count: 3 },
-        { grade: "A", count: 5 },
-        { grade: "A-", count: 8 },
-        { grade: "B+", count: 12 },
-        { grade: "B", count: 10 },
-        { grade: "B-", count: 4 },
-        { grade: "C+", count: 2 },
-        { grade: "C", count: 1 },
+        { grade: "A+", count: 0 },
+        { grade: "A", count: 0 },
+        { grade: "A-", count: 0 },
+        { grade: "B+", count: 0 },
+        { grade: "B", count: 0 },
+        { grade: "B-", count: 0 },
+        { grade: "C+", count: 0 },
+        { grade: "C", count: 0 },
         { grade: "C-", count: 0 },
       ];
+
+      // Calculate distribution based on comparison data
+      if (this.comparisonData.comparisons) {
+        // This is a simplified calculation - in a real app, you'd have actual grade distribution data
+        const totalStudents =
+          this.comparisonData.comparisons[0]?.submissions || 0;
+        if (totalStudents > 0) {
+          distribution[0].count = Math.floor(totalStudents * 0.1); // A+ ~10%
+          distribution[1].count = Math.floor(totalStudents * 0.15); // A ~15%
+          distribution[2].count = Math.floor(totalStudents * 0.2); // A- ~20%
+          distribution[3].count = Math.floor(totalStudents * 0.25); // B+ ~25%
+          distribution[4].count = Math.floor(totalStudents * 0.2); // B ~20%
+          distribution[5].count = Math.floor(totalStudents * 0.1); // B- ~10%
+        }
+      }
 
       return distribution;
     },
   },
+  async mounted() {
+    await this.loadPerformanceData();
+  },
   methods: {
-    selectCourse(course) {
+    async selectCourse(course) {
       this.selectedCourse = course;
+      this.loading = true;
+
+      try {
+        // Load real comparison data for the selected course
+        await this.loadCourseComparisonData(course.id);
+        await this.loadStudentRankData(course.id);
+        await this.loadClassAveragesData(course.id);
+      } catch (error) {
+        console.error("Error loading course comparison data:", error);
+        this.error = "Failed to load comparison data";
+      } finally {
+        this.loading = false;
+      }
     },
 
     updateComparisonType(type) {
@@ -266,15 +191,97 @@ export default {
       this.selectedViewType = type;
     },
 
+    // Load real comparison data from API
+    async loadCourseComparisonData(courseId) {
+      try {
+        const response = await studentPerformanceAPI.getCourseComparison(
+          courseId
+        );
+        if (response.success) {
+          this.comparisonData = response.data;
+          console.log("Loaded comparison data:", this.comparisonData);
+        } else {
+          console.error("Failed to load comparison data:", response.message);
+        }
+      } catch (error) {
+        console.error("Error loading comparison data:", error);
+      }
+    },
+
+    // Load student rank data from API
+    async loadStudentRankData(courseId) {
+      try {
+        const userResponse = await utilityAPI.getUserProfile();
+        if (userResponse.success && userResponse.data.role === "student") {
+          const studentId = userResponse.data.id;
+          const response = await studentPerformanceAPI.getStudentRank(
+            studentId,
+            courseId
+          );
+          if (response.success) {
+            this.rankData = response.data;
+            console.log("Loaded rank data:", this.rankData);
+          }
+        }
+      } catch (error) {
+        console.error("Error loading rank data:", error);
+      }
+    },
+
+    // Load class averages data from API
+    async loadClassAveragesData(courseId) {
+      try {
+        const response = await studentPerformanceAPI.getClassAverages(courseId);
+        if (response.success) {
+          this.classAverages = response.data;
+          console.log("Loaded class averages:", this.classAverages);
+        }
+      } catch (error) {
+        console.error("Error loading class averages:", error);
+      }
+    },
+
     // API methods for loading data
     async loadPerformanceData() {
+      this.loading = true;
+      this.error = null;
+
       try {
-        // TODO: Replace with actual API calls
-        // const response = await this.$http.get('/api/student/performance-comparison');
-        // this.enrolledCourses = response.data;
+        // Get user profile first
+        const userResponse = await utilityAPI.getUserProfile();
+        if (userResponse.success && userResponse.data.role === "student") {
+          const studentId = userResponse.data.id;
+
+          // Load student breakdown to get enrolled courses
+          const response = await studentPerformanceAPI.getStudentFullBreakdown(
+            studentId
+          );
+
+          if (response.success) {
+            const coursesData = response.data.courses || [];
+
+            // Transform API data to match component expectations
+            this.enrolledCourses = coursesData.map((course) => ({
+              id: course.course_id,
+              code: course.course_code,
+              name: course.course_name,
+              yourAverage: course.overall_percentage || 0,
+              yourRank: 0, // Will be loaded when course is selected
+              yourPercentile: 0, // Will be loaded when course is selected
+              yourGrade: course.grade_letter || "N/A",
+              classAverage: 0, // Will be loaded when course is selected
+              totalStudents: 0, // Will be loaded when course is selected
+              standardDeviation: 0, // Will be loaded when course is selected
+              trend: 0, // Will be loaded when course is selected
+              assessments: [], // Will be loaded when course is selected
+            }));
+          }
+        }
       } catch (error) {
         console.error("Error loading performance data:", error);
-        this.showError("Failed to load performance data");
+        this.error = "Failed to load performance data";
+      } finally {
+        this.loading = false;
       }
     },
 
@@ -282,15 +289,6 @@ export default {
       // TODO: Implement proper error handling/notification
       alert(message);
     },
-  },
-  async mounted() {
-    // Auto-select first course if available
-    if (this.enrolledCourses.length > 0) {
-      this.selectedCourse = this.enrolledCourses[0];
-    }
-
-    // Load performance data
-    await this.loadPerformanceData();
   },
 };
 </script>

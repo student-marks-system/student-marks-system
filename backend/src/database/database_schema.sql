@@ -191,37 +191,44 @@ CREATE TABLE audit_log (
 -- Insert some sample data to get started
 
 -- Sample users (passwords would be hashed in real application)
+-- Note: Using simple password hashes for development. In production, use proper password_hash()
 INSERT INTO users (username, email, password_hash, full_name, user_type) VALUES
-('LEK001', 'lecturer1@university.edu', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Dr. Sarah Johnson', 'lecturer'),
-('LEK002', 'lecturer2@university.edu', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Prof. Michael Chen', 'lecturer'),
-('ADV001', 'advisor1@university.edu', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Dr. Amanda Wilson', 'advisor'),
-('A20CS1001', 'student1@student.university.edu', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'John Smith', 'student'),
-('A20CS1002', 'student2@student.university.edu', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Emily Davis', 'student'),
-('A20CS1003', 'student3@student.university.edu', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Marcus Johnson', 'student');
+-- Test users that match frontend credentials
+('A12345', 'student1@student.university.edu', '$2y$10$HSAO6n5HAW..DgBBGvq5T.C7DBQqsa84AROC.9LXQOWCiknDa0rgq', 'John Smith', 'student'),
+('B23456', 'student2@student.university.edu', '$2y$10$HSAO6n5HAW..DgBBGvq5T.C7DBQqsa84AROC.9LXQOWCiknDa0rgq', 'Emily Davis', 'student'),
+('L001', 'lecturer1@university.edu', '$2y$10$5LgACe02ICSd2UryTHure.8YFBp4aBAINystxarKV6Fox/ke4qdhK', 'Dr. Sarah Johnson', 'lecturer'),
+('L002', 'lecturer2@university.edu', '$2y$10$5LgACe02ICSd2UryTHure.8YFBp4aBAINystxarKV6Fox/ke4qdhK', 'Prof. Michael Chen', 'lecturer'),
+('ADV001', 'advisor1@university.edu', '$2y$10$QMzy9KK6HTO3NJOu5b0Cgu98SBWhvqWk8NPKXDKw8G.ehfk47fvki', 'Dr. Amanda Wilson', 'advisor'),
+('ADV002', 'advisor2@university.edu', '$2y$10$QMzy9KK6HTO3NJOu5b0Cgu98SBWhvqWk8NPKXDKw8G.ehfk47fvki', 'Dr. Robert Brown', 'advisor'),
+('admin', 'admin@university.edu', '$2y$10$Z/vBVjkPICN9um8AnW5/a.X0kBv/nqDK70jus44vYXSlouwhqX2Si', 'System Administrator', 'admin');
 
 -- Sample courses
 INSERT INTO courses (course_code, course_name, credits, semester, academic_year) VALUES
 ('SECJ3483', 'Web Technology', 3, '2024/2025-1', '2024/2025'),
 ('SECJ2203', 'Database Systems', 3, '2024/2025-1', '2024/2025'),
-('SECJ3103', 'Software Engineering', 3, '2024/2025-1', '2024/2025');
+('SECJ3103', 'Software Engineering', 3, '2024/2025-1', '2024/2025'),
+('SECJ1013', 'Programming Technique I', 3, '2024/2025-1', '2024/2025'),
+('SECJ2154', 'Object Oriented Programming', 4, '2024/2025-1', '2024/2025'),
+('SECJ2303', 'Computer Networks', 3, '2024/2025-1', '2024/2025');
 
 -- Link lecturers to courses
 INSERT INTO course_lecturers (lecturer_id, course_id, role) VALUES
-(1, 1, 'primary'), -- Dr. Sarah teaches Web Technology
-(2, 2, 'primary'), -- Prof. Michael teaches Database Systems
-(1, 3, 'primary'); -- Dr. Sarah also teaches Software Engineering
+(3, 1, 'primary'), -- Dr. Sarah teaches Web Technology
+(4, 2, 'primary'), -- Prof. Michael teaches Database Systems
+(3, 3, 'primary'), -- Dr. Sarah also teaches Software Engineering
+(4, 4, 'primary'), -- Prof. Michael teaches Programming Technique I
+(3, 5, 'primary'), -- Dr. Sarah teaches Object Oriented Programming
+(4, 6, 'primary'); -- Prof. Michael teaches Computer Networks
 
 -- Enroll students in courses
 INSERT INTO course_enrollments (student_id, course_id) VALUES
-(4, 1), (4, 2), (4, 3), -- John takes all three courses
-(5, 1), (5, 2), -- Emily takes Web Tech and Database
-(6, 1), (6, 3); -- Marcus takes Web Tech and Software Engineering
+(1, 1), (1, 2), (1, 3), (1, 4), (1, 5), -- John takes all courses
+(2, 1), (2, 2), (2, 4), (2, 6); -- Emily takes Web Tech, Database, Programming, Networks
 
 -- Assign advisor to students
 INSERT INTO advisor_assignments (advisor_id, student_id, assigned_date) VALUES
-(3, 4, '2024-09-01'), -- Dr. Amanda advises John
-(3, 5, '2024-09-01'), -- Dr. Amanda advises Emily
-(3, 6, '2024-09-01'); -- Dr. Amanda advises Marcus
+(5, 1, '2024-09-01'), -- Dr. Amanda advises John
+(6, 2, '2024-09-01'); -- Dr. Robert advises Emily
 
 -- Sample assessment components for Web Technology course
 INSERT INTO assessment_components (course_id, component_name, component_type, max_marks, weight_percentage, description, is_published) VALUES
@@ -229,17 +236,63 @@ INSERT INTO assessment_components (course_id, component_name, component_type, ma
 (1, 'Assignment 1', 'assignment', 100.00, 15.00, 'Build a responsive website using HTML/CSS', TRUE),
 (1, 'Lab Exercise 1', 'lab', 50.00, 5.00, 'JavaScript DOM Manipulation', TRUE),
 (1, 'Test 1', 'test', 100.00, 20.00, 'Mid-semester examination covering HTML, CSS, JavaScript', TRUE),
-(1, 'Assignment 2', 'assignment', 100.00, 20.00, 'Full-stack web application using PHP and MySQL', FALSE),
+(1, 'Assignment 2', 'assignment', 100.00, 20.00, 'Full-stack web application using PHP and MySQL', TRUE),
 (1, 'Final Exam', 'final_exam', 100.00, 30.00, 'Comprehensive final examination', FALSE);
 
--- Some sample marks for demonstration
+-- Sample assessment components for Database Systems course
+INSERT INTO assessment_components (course_id, component_name, component_type, max_marks, weight_percentage, description, is_published) VALUES
+(2, 'Quiz 1', 'quiz', 15.00, 10.00, 'Database Fundamentals', TRUE),
+(2, 'Assignment 1', 'assignment', 100.00, 20.00, 'ERD Design and Normalization', TRUE),
+(2, 'Lab Exercise 1', 'lab', 50.00, 10.00, 'SQL Basics', TRUE),
+(2, 'Test 1', 'test', 100.00, 25.00, 'Mid-semester examination', TRUE),
+(2, 'Assignment 2', 'assignment', 100.00, 25.00, 'Database Application Development', TRUE),
+(2, 'Final Exam', 'final_exam', 100.00, 10.00, 'Final examination', FALSE);
+
+-- Sample assessment components for Software Engineering course
+INSERT INTO assessment_components (course_id, component_name, component_type, max_marks, weight_percentage, description, is_published) VALUES
+(3, 'Quiz 1', 'quiz', 20.00, 10.00, 'Software Development Life Cycle', TRUE),
+(3, 'Assignment 1', 'assignment', 100.00, 20.00, 'Requirements Engineering', TRUE),
+(3, 'Lab Exercise 1', 'lab', 50.00, 10.00, 'UML Modeling', TRUE),
+(3, 'Test 1', 'test', 100.00, 25.00, 'Mid-semester examination', TRUE),
+(3, 'Assignment 2', 'assignment', 100.00, 25.00, 'Software Design and Architecture', TRUE),
+(3, 'Final Exam', 'final_exam', 100.00, 10.00, 'Final examination', FALSE);
+
+-- Sample marks for John Smith (A12345) - Web Technology
 INSERT INTO student_marks (student_id, assessment_component_id, marks_obtained, graded_by, graded_at, is_final) VALUES
-(4, 1, 18.00, 1, NOW(), TRUE), -- John's Quiz 1: 18/20
-(4, 2, 85.00, 1, NOW(), TRUE), -- John's Assignment 1: 85/100
-(4, 3, 45.00, 1, NOW(), TRUE), -- John's Lab 1: 45/50
-(5, 1, 16.00, 1, NOW(), TRUE), -- Emily's Quiz 1: 16/20
-(5, 2, 92.00, 1, NOW(), TRUE), -- Emily's Assignment 1: 92/100
-(5, 3, 48.00, 1, NOW(), TRUE), -- Emily's Lab 1: 48/50
-(6, 1, 14.00, 1, NOW(), TRUE), -- Marcus's Quiz 1: 14/20
-(6, 2, 78.00, 1, NOW(), TRUE), -- Marcus's Assignment 1: 78/100
-(6, 3, 42.00, 1, NOW(), TRUE); -- Marcus's Lab 1: 42/50
+(1, 1, 18.00, 3, NOW(), TRUE), -- Quiz 1: 18/20
+(1, 2, 85.00, 3, NOW(), TRUE), -- Assignment 1: 85/100
+(1, 3, 45.00, 3, NOW(), TRUE), -- Lab 1: 45/50
+(1, 4, 78.00, 3, NOW(), TRUE), -- Test 1: 78/100
+(1, 5, 92.00, 3, NOW(), TRUE); -- Assignment 2: 92/100
+
+-- Sample marks for John Smith (A12345) - Database Systems
+INSERT INTO student_marks (student_id, assessment_component_id, marks_obtained, graded_by, graded_at, is_final) VALUES
+(1, 7, 14.00, 4, NOW(), TRUE), -- Quiz 1: 14/15
+(1, 8, 88.00, 4, NOW(), TRUE), -- Assignment 1: 88/100
+(1, 9, 48.00, 4, NOW(), TRUE), -- Lab 1: 48/50
+(1, 10, 82.00, 4, NOW(), TRUE), -- Test 1: 82/100
+(1, 11, 95.00, 4, NOW(), TRUE); -- Assignment 2: 95/100
+
+-- Sample marks for John Smith (A12345) - Software Engineering
+INSERT INTO student_marks (student_id, assessment_component_id, marks_obtained, graded_by, graded_at, is_final) VALUES
+(1, 13, 17.00, 3, NOW(), TRUE), -- Quiz 1: 17/20
+(1, 14, 90.00, 3, NOW(), TRUE), -- Assignment 1: 90/100
+(1, 15, 47.00, 3, NOW(), TRUE), -- Lab 1: 47/50
+(1, 16, 85.00, 3, NOW(), TRUE), -- Test 1: 85/100
+(1, 17, 88.00, 3, NOW(), TRUE); -- Assignment 2: 88/100
+
+-- Sample marks for Emily Davis (B23456) - Web Technology
+INSERT INTO student_marks (student_id, assessment_component_id, marks_obtained, graded_by, graded_at, is_final) VALUES
+(2, 1, 16.00, 3, NOW(), TRUE), -- Quiz 1: 16/20
+(2, 2, 92.00, 3, NOW(), TRUE), -- Assignment 1: 92/100
+(2, 3, 48.00, 3, NOW(), TRUE), -- Lab 1: 48/50
+(2, 4, 85.00, 3, NOW(), TRUE), -- Test 1: 85/100
+(2, 5, 89.00, 3, NOW(), TRUE); -- Assignment 2: 89/100
+
+-- Sample marks for Emily Davis (B23456) - Database Systems
+INSERT INTO student_marks (student_id, assessment_component_id, marks_obtained, graded_by, graded_at, is_final) VALUES
+(2, 7, 13.00, 4, NOW(), TRUE), -- Quiz 1: 13/15
+(2, 8, 95.00, 4, NOW(), TRUE), -- Assignment 1: 95/100
+(2, 9, 50.00, 4, NOW(), TRUE), -- Lab 1: 50/50
+(2, 10, 88.00, 4, NOW(), TRUE), -- Test 1: 88/100
+(2, 11, 92.00, 4, NOW(), TRUE); -- Assignment 2: 92/100

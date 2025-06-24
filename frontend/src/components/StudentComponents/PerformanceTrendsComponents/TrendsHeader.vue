@@ -2,7 +2,7 @@
   <div class="trends-header">
     <div class="header-content">
       <div class="breadcrumb">
-        <router-link to="/dashboard" class="breadcrumb-link"
+        <router-link to="/student/dashboard" class="breadcrumb-link"
           >Dashboard</router-link
         >
         <span class="breadcrumb-separator">›</span>

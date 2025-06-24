@@ -41,61 +41,62 @@ export default {
       required: true,
       default: () => ({}),
     },
+    comparisonData: {
+      type: Object,
+      required: false,
+      default: () => ({}),
+    },
   },
   methods: {
     getMostChallengingAssessment() {
       if (
-        !this.selectedCourse.assessments ||
-        this.selectedCourse.assessments.length === 0
+        !this.comparisonData.comparisons ||
+        this.comparisonData.comparisons.length === 0
       ) {
         return "No assessments available";
       }
 
-      return this.selectedCourse.assessments.reduce((min, assessment) =>
-        assessment.classAverage / assessment.maxScore <
-        min.classAverage / min.maxScore
-          ? assessment
-          : min
-      ).name;
+      return this.comparisonData.comparisons.reduce((min, assessment) => {
+        const minPercentage = min.class_average_percentage || 0;
+        const currentPercentage = assessment.class_average_percentage || 0;
+        return currentPercentage < minPercentage ? assessment : min;
+      }).component_name;
     },
 
     getBestClassPerformance() {
       if (
-        !this.selectedCourse.assessments ||
-        this.selectedCourse.assessments.length === 0
+        !this.comparisonData.comparisons ||
+        this.comparisonData.comparisons.length === 0
       ) {
         return "No assessments available";
       }
 
-      return this.selectedCourse.assessments.reduce((max, assessment) =>
-        assessment.classAverage / assessment.maxScore >
-        max.classAverage / max.maxScore
-          ? assessment
-          : max
-      ).name;
+      return this.comparisonData.comparisons.reduce((max, assessment) => {
+        const maxPercentage = max.class_average_percentage || 0;
+        const currentPercentage = assessment.class_average_percentage || 0;
+        return currentPercentage > maxPercentage ? assessment : max;
+      }).component_name;
     },
 
     getImprovementOpportunity() {
       if (
-        !this.selectedCourse.assessments ||
-        this.selectedCourse.assessments.length === 0
+        !this.comparisonData.comparisons ||
+        this.comparisonData.comparisons.length === 0
       ) {
         return "No assessments available";
       }
 
-      return this.selectedCourse.assessments.reduce((min, assessment) => {
-        const yourPercentage =
-          (assessment.yourScore / assessment.maxScore) * 100;
-        const classPercentage =
-          (assessment.classAverage / assessment.maxScore) * 100;
+      return this.comparisonData.comparisons.reduce((min, assessment) => {
+        const yourPercentage = assessment.my_percentage || 0;
+        const classPercentage = assessment.class_average_percentage || 0;
         const gap = classPercentage - yourPercentage;
 
-        const minYourPercentage = (min.yourScore / min.maxScore) * 100;
-        const minClassPercentage = (min.classAverage / min.maxScore) * 100;
+        const minYourPercentage = min.my_percentage || 0;
+        const minClassPercentage = min.class_average_percentage || 0;
         const minGap = minClassPercentage - minYourPercentage;
 
         return gap > minGap ? assessment : min;
-      }).name;
+      }).component_name;
     },
   },
 };

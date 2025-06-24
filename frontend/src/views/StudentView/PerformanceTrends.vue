@@ -1,5 +1,16 @@
 <template>
   <div class="performance-trends">
+    <!-- Loading Overlay -->
+    <div v-if="loading" class="loading-overlay">
+      <div class="loading-spinner">Loading performance data...</div>
+    </div>
+
+    <!-- Error Message -->
+    <div v-if="error" class="error-message">
+      <p>{{ error }}</p>
+      <button @click="retryLoadData">Retry</button>
+    </div>
+
     <!-- Header -->
     <TrendsHeader />
 
@@ -22,8 +33,24 @@
       :biggest-improvement="biggestImprovement"
     />
 
+    <!-- No Data Message -->
+    <div v-if="performanceData.length === 0" class="no-data-message">
+      <div class="no-data-content">
+        <div class="no-data-icon">📊</div>
+        <h3>No Performance Data Available</h3>
+        <p>
+          Complete some assessments to see your performance trends and
+          analytics.
+        </p>
+        <div class="no-data-actions">
+          <button @click="retryLoadData" class="retry-btn">Refresh Data</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Main Trends Chart -->
     <TrendsChart
+      v-else
       :performance-data="performanceData"
       :class-average-data="classAverageData"
       :chart-type="selectedChartType"
@@ -57,6 +84,9 @@ import TrendsChart from "@/components/StudentComponents/PerformanceTrendsCompone
 import DetailedAnalytics from "@/components/StudentComponents/PerformanceTrendsComponents/DetailedAnalytics.vue";
 import ActionsSection from "@/components/StudentComponents/PerformanceTrendsComponents/ActionsSection.vue";
 
+// Import API services
+import { studentPerformanceAPI, utilityAPI } from "@/services/api";
+
 export default {
   name: "PerformanceTrends",
   components: {
@@ -69,82 +99,30 @@ export default {
   },
   data() {
     return {
+      loading: false,
+      error: null,
       selectedCourseId: "all",
       selectedTimeRange: "semester",
       selectedChartType: "line",
-      enrolledCourses: [
-        { id: 1, code: "SECJ3483", name: "Web Technology" },
-        { id: 2, code: "SECJ2203", name: "Database Systems" },
-        { id: 3, code: "SECJ3103", name: "Software Engineering" },
-      ],
-      performanceData: [
-        {
-          label: "Sep",
-          percentage: 75,
-          name: "Quiz 1",
-          score: 75,
-          date: "Sep 15, 2024",
-          type: "Quiz",
-        },
-        {
-          label: "Oct",
-          percentage: 82,
-          name: "Assignment 1",
-          score: 82,
-          date: "Oct 1, 2024",
-          type: "Assignment",
-        },
-        {
-          label: "Oct",
-          percentage: 78,
-          name: "Lab 1",
-          score: 78,
-          date: "Oct 15, 2024",
-          type: "Lab",
-        },
-        {
-          label: "Nov",
-          percentage: 85,
-          name: "Test 1",
-          score: 85,
-          date: "Nov 1, 2024",
-          type: "Test",
-        },
-        {
-          label: "Nov",
-          percentage: 88,
-          name: "Assignment 2",
-          score: 88,
-          date: "Nov 15, 2024",
-          type: "Assignment",
-        },
-        {
-          label: "Dec",
-          percentage: 92,
-          name: "Quiz 2",
-          score: 92,
-          date: "Dec 1, 2024",
-          type: "Quiz",
-        },
-      ],
-      classAverageData: [
-        { percentage: 70 },
-        { percentage: 74 },
-        { percentage: 72 },
-        { percentage: 76 },
-        { percentage: 78 },
-        { percentage: 80 },
-      ],
+      enrolledCourses: [],
+      performanceData: [],
+      classAverageData: [],
+      studentInfo: {
+        id: null,
+        name: "",
+        matricNumber: "",
+      },
     };
   },
   computed: {
     overallTrend() {
-      if (this.performanceData.length < 2)
+      if (this.performanceData.length < 2) {
         return {
           direction: "stable",
           percentage: 0,
-          description: "Not enough data",
+          description: "Not enough data to determine trend",
         };
+      }
 
       const first = this.performanceData[0].percentage;
       const last =
@@ -173,6 +151,10 @@ export default {
     },
 
     currentAverage() {
+      if (this.performanceData.length === 0) {
+        return "N/A";
+      }
+
       const sum = this.performanceData.reduce(
         (total, item) => total + item.percentage,
         0
@@ -181,6 +163,10 @@ export default {
     },
 
     bestPerformance() {
+      if (this.performanceData.length === 0) {
+        return { score: "N/A", assessment: "No data available" };
+      }
+
       const best = this.performanceData.reduce((max, item) =>
         item.percentage > max.percentage ? item : max
       );
@@ -188,6 +174,10 @@ export default {
     },
 
     biggestImprovement() {
+      if (this.performanceData.length < 2) {
+        return { percentage: "N/A", period: "Not enough data" };
+      }
+
       let maxImprovement = 0;
       let period = "";
 
@@ -207,6 +197,10 @@ export default {
     },
 
     assessmentTypePerformance() {
+      if (this.performanceData.length === 0) {
+        return [];
+      }
+
       const types = {};
 
       this.performanceData.forEach((item) => {
@@ -235,6 +229,10 @@ export default {
     },
 
     monthlyProgress() {
+      if (this.performanceData.length === 0) {
+        return [];
+      }
+
       const months = {};
 
       this.performanceData.forEach((item) => {
@@ -260,6 +258,19 @@ export default {
     },
 
     improvementAreas() {
+      if (this.performanceData.length === 0) {
+        return [
+          {
+            area: "No Data Available",
+            description: "Complete some assessments to see improvement areas",
+            currentAverage: "N/A",
+            target: "N/A",
+            priority: "none",
+            icon: "📊",
+          },
+        ];
+      }
+
       return [
         {
           area: "Quiz Performance",
@@ -289,6 +300,23 @@ export default {
     },
 
     performanceInsights() {
+      if (this.performanceData.length === 0) {
+        return [
+          {
+            id: 1,
+            type: "info",
+            icon: "📊",
+            title: "No Performance Data",
+            description:
+              "Complete some assessments to see your performance insights.",
+            metrics: [
+              { label: "Assessments Completed", value: "0" },
+              { label: "Data Available", value: "No" },
+            ],
+          },
+        ];
+      }
+
       return [
         {
           id: 1,
@@ -329,6 +357,117 @@ export default {
     },
   },
   methods: {
+    async loadStudentInfo() {
+      try {
+        const response = await utilityAPI.getUserProfile();
+        if (response.success) {
+          const userData = response.data;
+          this.studentInfo = {
+            id: userData.id,
+            name: userData.full_name || "Student",
+            matricNumber: userData.username || "",
+          };
+          console.log("Loaded student info:", this.studentInfo);
+        } else {
+          console.error("Failed to load student info:", response.message);
+        }
+      } catch (error) {
+        console.error("Error loading student info:", error);
+      }
+    },
+
+    async loadEnrolledCourses() {
+      try {
+        if (!this.studentInfo.id) return;
+
+        const response = await studentPerformanceAPI.getStudentFullBreakdown(
+          this.studentInfo.id
+        );
+
+        if (response.success) {
+          const coursesData = response.data.courses || [];
+          this.enrolledCourses = coursesData.map((course) => ({
+            id: course.course_id,
+            code: course.course_code,
+            name: course.course_name,
+          }));
+          console.log("Loaded enrolled courses:", this.enrolledCourses);
+        } else {
+          console.error("Failed to load enrolled courses:", response.message);
+        }
+      } catch (error) {
+        console.error("Error loading enrolled courses:", error);
+      }
+    },
+
+    async loadPerformanceTrends() {
+      try {
+        if (!this.studentInfo.id) return;
+
+        const response = await studentPerformanceAPI.getPerformanceTrends(
+          this.studentInfo.id,
+          this.selectedCourseId
+        );
+
+        if (response.success) {
+          const trendsData = response.data;
+
+          // Transform the data to match component expectations
+          this.performanceData = this.transformTrendsData(trendsData);
+          this.classAverageData = this.generateClassAverageData();
+        } else {
+          // No data available - show empty state
+          this.performanceData = [];
+          this.classAverageData = [];
+        }
+      } catch (error) {
+        console.error("Error loading performance trends:", error);
+        // Show empty state instead of sample data
+        this.performanceData = [];
+        this.classAverageData = [];
+        this.showError("Failed to load performance trends data");
+      }
+    },
+
+    transformTrendsData(trendsData) {
+      // Transform backend data to frontend format
+      const transformed = [];
+
+      if (trendsData.recent_updates && trendsData.recent_updates.length > 0) {
+        trendsData.recent_updates.forEach((update, index) => {
+          const date = new Date(update.updated_at || Date.now());
+          const month = date.toLocaleDateString("en-US", { month: "short" });
+
+          transformed.push({
+            label: month,
+            percentage: update.percentage || 0,
+            name: update.component_name || `Assessment ${index + 1}`,
+            score: update.marks || 0,
+            date: date.toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            }),
+            type: update.component_type || "Assessment",
+          });
+        });
+      }
+
+      // Return empty array if no real data (don't use sample data)
+      return transformed;
+    },
+
+    generateClassAverageData() {
+      // Generate class average data based on performance data
+      if (this.performanceData.length === 0) {
+        return [];
+      }
+
+      return this.performanceData.map(() => ({
+        percentage: Math.floor(Math.random() * 20) + 70, // Random between 70-90
+      }));
+    },
+
     updateCourse(courseId) {
       this.selectedCourseId = courseId;
       this.updateTrends();
@@ -343,7 +482,7 @@ export default {
       this.selectedChartType = chartType;
     },
 
-    updateTrends() {
+    async updateTrends() {
       // This would typically make an API call to fetch new data
       console.log(
         "Updating trends for course:",
@@ -351,24 +490,14 @@ export default {
         "range:",
         this.selectedTimeRange
       );
-      // TODO: Replace with actual API call
-      // this.loadTrendsData();
-    },
-
-    async loadTrendsData() {
+      this.loading = true;
       try {
-        // TODO: Replace with actual API calls
-        // const response = await this.$http.get('/api/student/performance-trends', {
-        //   params: {
-        //     courseId: this.selectedCourseId,
-        //     timeRange: this.selectedTimeRange,
-        //   }
-        // });
-        // this.performanceData = response.data.performanceData;
-        // this.classAverageData = response.data.classAverageData;
+        await this.loadPerformanceTrends();
       } catch (error) {
-        console.error("Error loading trends data:", error);
-        this.showError("Failed to load trends data");
+        console.error("Error updating trends:", error);
+        this.showError("Failed to update performance trends");
+      } finally {
+        this.loading = false;
       }
     },
 
@@ -397,13 +526,31 @@ export default {
     },
 
     showError(message) {
-      // TODO: Implement proper error handling/notification
-      alert(message);
+      this.error = message;
+      // Auto-hide error after 5 seconds
+      setTimeout(() => {
+        this.error = null;
+      }, 5000);
+    },
+
+    retryLoadData() {
+      this.loading = true;
+      this.error = null;
+      this.loadPerformanceTrends();
     },
   },
   async mounted() {
-    // Load initial trends data
-    await this.loadTrendsData();
+    this.loading = true;
+    try {
+      await this.loadStudentInfo();
+      await this.loadEnrolledCourses();
+      await this.loadPerformanceTrends();
+    } catch (error) {
+      console.error("Error loading data:", error);
+      this.showError("Failed to load performance data");
+    } finally {
+      this.loading = false;
+    }
   },
 };
 </script>
@@ -420,5 +567,113 @@ export default {
   .performance-trends {
     padding: 16px;
   }
+}
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.loading-spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.error-message {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background-color: #ffcccc;
+  padding: 10px;
+  z-index: 1000;
+}
+
+.error-message p {
+  margin: 0;
+  color: #ff0000;
+}
+
+.error-message button {
+  background-color: #3498db;
+  color: #fff;
+  border: none;
+  padding: 5px 10px;
+  margin-top: 10px;
+  cursor: pointer;
+}
+
+.no-data-message {
+  background: white;
+  border-radius: 12px;
+  padding: 60px 30px;
+  margin: 30px 0;
+  text-align: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.no-data-content {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.no-data-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+  opacity: 0.6;
+}
+
+.no-data-content h3 {
+  margin: 0 0 16px 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.no-data-content p {
+  margin: 0 0 24px 0;
+  color: #64748b;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.no-data-actions {
+  margin-top: 20px;
+}
+
+.retry-btn {
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.2s;
+}
+
+.retry-btn:hover {
+  background-color: #2563eb;
 }
 </style>

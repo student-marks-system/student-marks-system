@@ -20,6 +20,7 @@
     <!-- Course Performance Section -->
     <CoursePerformanceSection
       :courses="courses"
+      :loading="loadingCourses"
       @view-all-courses="handleViewAllCourses"
       @course-details="handleCourseDetails"
     />
@@ -30,8 +31,20 @@
     <!-- Recent Activity Section -->
     <RecentActivitySection
       :activities="recentActivities"
+      :loading="loadingActivities"
       @activity-action="handleActivityAction"
     />
+
+    <!-- Loading Overlay -->
+    <div v-if="loading" class="loading-overlay">
+      <div class="loading-spinner">Loading...</div>
+    </div>
+
+    <!-- Error Message -->
+    <div v-if="error" class="error-message">
+      <p>{{ error }}</p>
+      <button @click="retryLoadData">Retry</button>
+    </div>
   </div>
 </template>
 
@@ -42,6 +55,10 @@ import StatsGrid from "@/components/StudentComponents/DashboardComponents/StatsG
 import CoursePerformanceSection from "@/components/StudentComponents/DashboardComponents/CoursePerformanceSection.vue";
 import QuickActionsSection from "@/components/StudentComponents/DashboardComponents/QuickActionsSection.vue";
 import RecentActivitySection from "@/components/StudentComponents/DashboardComponents/RecentActivitySection.vue";
+
+// Import API services
+import { studentPerformanceAPI, utilityAPI } from "@/services/api";
+import authService from "@/services/auth";
 
 export default {
   name: "StudentDashboard",
@@ -54,143 +71,243 @@ export default {
   },
   data() {
     return {
+      loading: false,
+      loadingCourses: false,
+      loadingActivities: false,
+      error: null,
+
       studentInfo: {
-        name: "John Smith",
-        matricNumber: "A20CS1001",
-        currentSemester: "2024/2025 Semester 1",
+        id: null,
+        name: "Loading...",
+        matricNumber: "",
+        currentSemester: "",
+        email: "",
+        department: "",
+        program: "",
       },
+
       academicStats: {
-        overallGPA: "3.67",
-        gpaChange: "+0.15",
-        enrolledCoursesCount: 3,
-        classRank: 12,
-        totalStudents: 85,
-        percentile: 86,
+        overallGPA: 0.0,
+        gpaChange: 0.0,
+        enrolledCoursesCount: 0,
+        classRank: 0,
+        totalStudents: 0,
+        percentile: 0,
+        creditHours: 0,
+        completedCourses: 0,
       },
-      courses: [
-        {
-          id: 1,
-          code: "SECJ3483",
-          name: "Web Technology",
-          credits: 3,
-          currentMarks: 248,
-          totalMarks: 270,
-          progressPercentage: 92,
-          currentGrade: "A-",
-          classAverage: "75",
-          completedAssessments: 3,
-          pendingAssessments: 3,
-        },
-        {
-          id: 2,
-          code: "SECJ2203",
-          name: "Database Systems",
-          credits: 3,
-          currentMarks: 165,
-          totalMarks: 200,
-          progressPercentage: 83,
-          currentGrade: "B+",
-          classAverage: "68",
-          completedAssessments: 2,
-          pendingAssessments: 4,
-        },
-        {
-          id: 3,
-          code: "SECJ3103",
-          name: "Software Engineering",
-          credits: 3,
-          currentMarks: 140,
-          totalMarks: 170,
-          progressPercentage: 82,
-          currentGrade: "B+",
-          classAverage: "72",
-          completedAssessments: 2,
-          pendingAssessments: 4,
-        },
-      ],
-      recentActivities: [
-        {
-          id: 1,
-          type: "grade_update",
-          title: "New marks posted",
-          description: "SECJ3483 - Assignment 2 marks are now available",
-          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-          actionRequired: true,
-          actionText: "View Details",
-        },
-        {
-          id: 2,
-          type: "reminder",
-          title: "Upcoming deadline",
-          description: "SECJ2203 - Lab Exercise 3 due in 2 days",
-          timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000), // 6 hours ago
-          actionRequired: false,
-        },
-        {
-          id: 3,
-          type: "remark_update",
-          title: "Remark request approved",
-          description: "Your remark request for Quiz 2 has been approved",
-          timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
-          actionRequired: true,
-          actionText: "View Updated Marks",
-        },
-        {
-          id: 4,
-          type: "announcement",
-          title: "Course announcement",
-          description: "New study materials uploaded for Software Engineering",
-          timestamp: new Date(Date.now() - 48 * 60 * 60 * 1000), // 2 days ago
-          actionRequired: false,
-        },
-      ],
+
+      courses: [],
+      recentActivities: [],
     };
   },
+
   async mounted() {
     await this.loadDashboardData();
   },
+
   methods: {
     async loadDashboardData() {
+      this.loading = true;
+      this.error = null;
+
       try {
-        // Load student information
+        // Load student info first, then load dependent data
         await this.loadStudentInfo();
 
-        // Load academic statistics
-        await this.loadAcademicStats();
-
-        // Load course data
-        await this.loadCourses();
-
-        // Load recent activities
-        await this.loadRecentActivities();
+        // Now load the rest of the data that depends on studentInfo.id
+        await Promise.all([
+          this.loadAcademicStats(),
+          this.loadCourses(),
+          this.loadRecentActivities(),
+        ]);
       } catch (error) {
         console.error("Error loading dashboard data:", error);
-        this.showError("Failed to load dashboard data");
+        this.error = "Failed to load dashboard data. Please try again.";
+      } finally {
+        this.loading = false;
       }
     },
 
     async loadStudentInfo() {
-      // TODO: Replace with actual API call
-      // const response = await this.$http.get('/api/student/profile');
-      // this.studentInfo = response.data;
+      try {
+        console.log("Starting loadStudentInfo...");
+        console.log("Current token:", authService.getToken());
+
+        const response = await utilityAPI.getUserProfile();
+        console.log("User profile response:", response);
+
+        if (response.success) {
+          const userData = response.data;
+          console.log("User data:", userData);
+
+          if (userData.role === "student") {
+            console.log("Fetching student breakdown for user ID:", userData.id);
+            const studentResponse =
+              await studentPerformanceAPI.getStudentFullBreakdown(userData.id);
+            console.log("Student breakdown response:", studentResponse);
+
+            if (studentResponse.success) {
+              const studentData = studentResponse.data.student_info;
+              console.log("Student data from breakdown:", studentData);
+              this.studentInfo = {
+                id: userData.id,
+                name: studentData.name || userData.full_name || "Student Name",
+                matricNumber:
+                  studentData.matric_number ||
+                  userData.username ||
+                  "Loading...",
+                currentSemester: studentData.current_semester || "2024/2025-1",
+                email: studentData.email || userData.email || "",
+                department: studentData.department || "Computer Science",
+                program: studentData.program || "Bachelor of Computer Science",
+              };
+              console.log("Updated studentInfo:", this.studentInfo);
+            } else {
+              console.log("Student breakdown failed:", studentResponse);
+              // Fallback to user profile data
+              this.studentInfo = {
+                id: userData.id,
+                name: userData.full_name || "Student Name",
+                matricNumber: userData.username || "Loading...",
+                currentSemester: "2024/2025-1",
+                email: userData.email || "",
+                department: "Computer Science",
+                program: "Bachelor of Computer Science",
+              };
+            }
+          }
+        } else {
+          console.log("User profile failed:", response);
+        }
+      } catch (error) {
+        console.error("Error loading student info:", error);
+        // Keep default loading state if API fails
+      }
     },
 
     async loadAcademicStats() {
-      // TODO: Replace with actual API call
-      // const response = await this.$http.get('/api/student/academic-stats');
-      // this.academicStats = response.data;
+      try {
+        if (!this.studentInfo.id) return;
+
+        const response = await studentPerformanceAPI.getStudentFullBreakdown(
+          this.studentInfo.id
+        );
+
+        if (response.success) {
+          const data = response.data;
+
+          this.academicStats = {
+            overallGPA: data.academic_summary?.overall_gpa || 0.0,
+            gpaChange:
+              data.academic_summary?.gpa_change !== undefined
+                ? String(data.academic_summary.gpa_change)
+                : "+0.00",
+            enrolledCoursesCount:
+              data.academic_summary?.enrolled_courses_count || 0,
+            classRank: data.academic_summary?.class_rank || 0,
+            totalStudents: data.academic_summary?.total_students || 0,
+            percentile: data.academic_summary?.percentile || 0,
+            creditHours: data.academic_summary?.credit_hours || 0,
+            completedCourses: data.academic_summary?.completed_courses || 0,
+          };
+        }
+      } catch (error) {
+        console.error("Error loading academic stats:", error);
+        // Keep default values if API fails
+      }
     },
 
     async loadCourses() {
-      // TODO: Replace with actual API call
-      // const response = await this.$http.get('/api/student/courses');
-      // this.courses = response.data;
+      this.loadingCourses = true;
+
+      try {
+        if (!this.studentInfo.id) return;
+
+        const response = await studentPerformanceAPI.getStudentFullBreakdown(
+          this.studentInfo.id
+        );
+
+        if (response.success) {
+          const coursesData = response.data.courses || [];
+
+          // Transform API data to match component expectations
+          this.courses = coursesData.map((course) => ({
+            id: course.course_id,
+            code: course.course_code,
+            name: course.course_name,
+            credits: course.credit_hours,
+            currentMarks: course.total_marks || 0,
+            totalMarks: course.max_marks || 100,
+            progressPercentage: course.percentage || 0,
+            currentGrade: course.grade_letter || "N/A",
+            status: course.status || "ongoing",
+            lecturer: course.lecturer_name || "TBA",
+            creditHours: course.credit_hours || 3,
+            components: course.components || [],
+            // Additional properties for CourseCard
+            classAverage: 75, // Placeholder - could be calculated from backend
+            completedAssessments: course.graded_components || 0,
+            pendingAssessments:
+              (course.total_components || 0) - (course.graded_components || 0),
+            // Map backend properties to frontend expectations
+            currentMark: course.total_marks || 0,
+            maxMark: course.max_marks || 100,
+            percentage: course.percentage || 0,
+            grade: course.grade_letter || "N/A",
+          }));
+        }
+      } catch (error) {
+        console.error("Error loading courses:", error);
+        this.courses = []; // Reset to empty array on error
+      } finally {
+        this.loadingCourses = false;
+      }
     },
 
     async loadRecentActivities() {
-      // TODO: Replace with actual API call
-      // const response = await this.$http.get('/api/student/recent-activities');
-      // this.recentActivities = response.data;
+      this.loadingActivities = true;
+
+      try {
+        // Since there's no specific endpoint for activities in the current API,
+        // we'll fetch from multiple sources and combine them
+        const activities = [];
+
+        if (this.studentInfo.id) {
+          // Get performance trends which might include recent grade updates
+          const trendsResponse =
+            await studentPerformanceAPI.getPerformanceTrends(
+              this.studentInfo.id
+            );
+
+          if (trendsResponse.data.success) {
+            const trends = trendsResponse.data.data.recent_updates || [];
+
+            trends.forEach((update) => {
+              activities.push({
+                id: update.id || Date.now() + Math.random(),
+                type: "grade_update",
+                title: "Grade Updated",
+                description: `${update.course_name}: ${update.component_name} - ${update.marks}/${update.max_marks}`,
+                timestamp: new Date(update.updated_at || Date.now()),
+                actionRequired: false,
+                courseId: update.course_id,
+              });
+            });
+          }
+        }
+
+        // Sort activities by timestamp (most recent first)
+        this.recentActivities = activities.sort(
+          (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+        );
+      } catch (error) {
+        console.error("Error loading recent activities:", error);
+        // Fallback to empty array if API fails
+        this.recentActivities = [];
+      } finally {
+        this.loadingActivities = false;
+      }
     },
 
     // Event handlers
@@ -210,16 +327,16 @@ export default {
       // Handle specific actions
       switch (action.id) {
         case "what-if":
-          this.$router.push("/what-if-simulator");
+          this.$router.push("/student/what-if-simulator");
           break;
         case "compare":
-          this.$router.push("/performance-comparison");
+          this.$router.push("/student/performance-comparison");
           break;
         case "remark":
-          this.$router.push("/remark-request");
+          this.$router.push("/student/remark-request");
           break;
         case "trends":
-          this.$router.push("/performance-trends");
+          this.$router.push("/student/performance-trends");
           break;
       }
     },
@@ -238,9 +355,16 @@ export default {
       }
     },
 
+    retryLoadData() {
+      this.loadDashboardData();
+    },
+
     showError(message) {
-      // TODO: Implement proper error handling/notification
-      alert(message);
+      this.error = message;
+      // Auto-hide error after 5 seconds
+      setTimeout(() => {
+        this.error = null;
+      }, 5000);
     },
   },
 };
@@ -253,12 +377,64 @@ export default {
   padding: 20px;
   background: #f8fafc;
   min-height: 100vh;
+  position: relative;
+}
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.loading-spinner {
+  background: #4f46e5;
+  color: white;
+  padding: 20px 40px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.error-message {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #fee;
+  border: 1px solid #fcc;
+  color: #c33;
+  padding: 15px;
+  border-radius: 8px;
+  max-width: 300px;
+  z-index: 1000;
+}
+
+.error-message button {
+  background: #c33;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  margin-top: 10px;
+  cursor: pointer;
 }
 
 /* Global responsive adjustments */
 @media (max-width: 768px) {
   .student-dashboard {
     padding: 10px;
+  }
+
+  .error-message {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
   }
 }
 </style>

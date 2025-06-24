@@ -6,7 +6,7 @@
         <div class="summary-icon">📊</div>
         <div class="summary-content">
           <h4>Average Performance</h4>
-          <p class="summary-value">{{ selectedCourse.classAverage }}%</p>
+          <p class="summary-value">{{ classAverage }}%</p>
           <p class="summary-detail">Across all assessments</p>
         </div>
       </div>
@@ -33,9 +33,7 @@
         <div class="summary-icon">🏆</div>
         <div class="summary-content">
           <h4>Your Position</h4>
-          <p class="summary-value">
-            Top {{ 100 - selectedCourse.yourPercentile }}%
-          </p>
+          <p class="summary-value">Top {{ 100 - yourPercentile }}%</p>
           <p class="summary-detail">Of the class</p>
         </div>
       </div>
@@ -52,25 +50,77 @@ export default {
       required: true,
       default: () => ({}),
     },
+    classAverages: {
+      type: Object,
+      required: false,
+      default: () => ({}),
+    },
+    rankData: {
+      type: Object,
+      required: false,
+      default: () => ({}),
+    },
+  },
+  computed: {
+    // Use real data from API instead of static course data
+    classAverage() {
+      if (
+        this.classAverages?.class_averages &&
+        this.classAverages.class_averages.length > 0
+      ) {
+        const totalAverage = this.classAverages.class_averages.reduce(
+          (sum, avg) => sum + (avg.average_percentage || 0),
+          0
+        );
+        return (
+          totalAverage / this.classAverages.class_averages.length
+        ).toFixed(1);
+      }
+      return 0;
+    },
+    yourPercentile() {
+      return this.rankData?.percentile || 0;
+    },
+    highestClassScore() {
+      if (
+        this.classAverages?.class_averages &&
+        this.classAverages.class_averages.length > 0
+      ) {
+        return Math.max(
+          ...this.classAverages.class_averages.map(
+            (avg) => avg.max_percentage || 0
+          )
+        ).toFixed(1);
+      }
+      return 0;
+    },
+    performanceRange() {
+      if (
+        this.classAverages?.class_averages &&
+        this.classAverages.class_averages.length > 0
+      ) {
+        const maxPercentage = Math.max(
+          ...this.classAverages.class_averages.map(
+            (avg) => avg.max_percentage || 0
+          )
+        );
+        const minPercentage = Math.min(
+          ...this.classAverages.class_averages.map(
+            (avg) => avg.min_percentage || 0
+          )
+        );
+        return (maxPercentage - minPercentage).toFixed(1);
+      }
+      return 0;
+    },
   },
   methods: {
     getHighestClassScore() {
-      if (!this.selectedCourse.assessments) return 0;
-      return Math.max(
-        ...this.selectedCourse.assessments.map(
-          (a) => (a.highestScore / a.maxScore) * 100
-        )
-      ).toFixed(1);
+      return this.highestClassScore;
     },
 
     getPerformanceRange() {
-      if (!this.selectedCourse.assessments) return 0;
-      const scores = this.selectedCourse.assessments.map(
-        (a) => (a.highestScore / a.maxScore) * 100
-      );
-      const highest = Math.max(...scores);
-      const lowest = Math.min(...scores) * 0.6; // Assuming lowest is around 60% of highest
-      return (highest - lowest).toFixed(1);
+      return this.performanceRange;
     },
   },
 };

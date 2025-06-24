@@ -12,8 +12,20 @@
           <div class="note-date">{{ formatDate(note.date) }}</div>
           <div class="note-type" :class="note.type">{{ note.type }}</div>
         </div>
+        <div v-if="note.title" class="note-title">
+          <h4>{{ note.title }}</h4>
+        </div>
         <div class="note-content">
           <p>{{ note.content }}</p>
+        </div>
+        <div class="note-meta">
+          <div v-if="note.followUpRequired" class="follow-up-badge">
+            <span class="follow-up-icon">📋</span>
+            Follow-up Required
+            <span v-if="note.followUpCompleted" class="completed"
+              >✓ Completed</span
+            >
+          </div>
         </div>
         <div class="note-actions">
           <button class="note-action edit" @click="$emit('edit-note', note.id)">
@@ -156,10 +168,43 @@ export default {
   color: #d97706;
 }
 
+.note-title h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
 .note-content p {
   margin: 0;
   color: #1e293b;
   line-height: 1.5;
+}
+
+.note-meta {
+  margin-top: 8px;
+}
+
+.follow-up-badge {
+  background: #fef3c7;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.follow-up-icon {
+  margin-right: 4px;
+}
+
+.completed {
+  background: #dcfce7;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: #059669;
 }
 
 .note-actions {
