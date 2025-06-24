@@ -24,6 +24,35 @@ import authService from "@/services/auth";
 import Login from "@/views/LoginPage.vue";
 import LecturerDashboard from "@/views/LecturerView/LecturerDashboard.vue";
 
+// Additional routes from Tabinda branch (if not already present)
+const extraRoutes = [
+  {
+    path: "/admin",
+    name: "AdminPanel",
+    component: () => import("../views/AdminView/AdminPanel.vue"),
+  },
+  {
+    path: "/lecturer",
+    name: "LecturerPanel",
+    component: () => import("../views/LecturerView/LecturerPanel.vue"),
+  },
+  {
+    path: "/enrollment",
+    name: "EnrollmentPanel",
+    component: () => import("../views/EnrollmentView/EnrollmentPanel.vue"),
+  },
+  {
+    path: "/marks",
+    name: "MarksPanel",
+    component: () => import("../views/MarksView/MarksPanel.vue"),
+  },
+  {
+    path: "/notification",
+    name: "NotificationPanel",
+    component: () => import("../views/NotificationView/NotificationPanel.vue"),
+  },
+];
+
 const routes = [
   {
     path: "/",
@@ -290,6 +319,7 @@ const routes = [
     path: "/admin/dashboard",
     redirect: "/login",
   },
+  ...extraRoutes, // Add any extra routes from Tabinda branch
 ];
 
 const router = createRouter({
