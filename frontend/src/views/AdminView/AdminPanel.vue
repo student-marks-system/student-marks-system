@@ -38,9 +38,16 @@
 
       <div class="form-actions">
         <button type="submit" class="btn primary">
-          {{ editId ? 'Update' : 'Add' }} User
+          {{ editId ? "Update" : "Add" }} User
         </button>
-        <button type="button" class="btn secondary" v-if="editId" @click="resetForm">Cancel</button>
+        <button
+          type="button"
+          class="btn secondary"
+          v-if="editId"
+          @click="resetForm"
+        >
+          Cancel
+        </button>
       </div>
     </form>
 
@@ -53,13 +60,15 @@
           <div class="user-tags">
             <span class="tag role">{{ user.user_type }}</span>
             <span :class="['tag', user.is_active ? 'active' : 'inactive']">
-              {{ user.is_active ? 'Active' : 'Inactive' }}
+              {{ user.is_active ? "Active" : "Inactive" }}
             </span>
           </div>
         </div>
         <div class="user-actions">
           <button @click="editUser(user)" class="btn small edit">✏</button>
-          <button @click="confirmDelete(user)" class="btn small delete">🗑</button>
+          <button @click="confirmDelete(user)" class="btn small delete">
+            🗑
+          </button>
         </div>
       </li>
     </ul>
@@ -68,9 +77,15 @@
     <div v-if="showModal" class="modal-overlay">
       <div class="modal">
         <h3>⚠ Confirm Deletion</h3>
-        <p>Are you sure you want to delete <strong>{{ toDelete.username }}</strong>?</p>
+        <p>
+          Are you sure you want to delete
+          <strong>{{ toDelete.username }}</strong
+          >?
+        </p>
         <div class="modal-actions">
-          <button @click="deleteUserConfirmed" class="btn delete">Yes, Delete</button>
+          <button @click="deleteUserConfirmed" class="btn delete">
+            Yes, Delete
+          </button>
           <button @click="cancelDelete" class="btn secondary">Cancel</button>
         </div>
       </div>
@@ -79,43 +94,47 @@
 </template>
 
 <script>
-import api from '@/api';
+import api from "@/services/api";
 
 export default {
   data() {
     return {
       users: [],
       form: {
-        username: '',
-        email: '',
-        user_type: 'student',
-        is_active: true
+        username: "",
+        email: "",
+        user_type: "student",
+        is_active: true,
       },
       editId: null,
-      message: '',
-      messageType: '',
+      message: "",
+      messageType: "",
       showModal: false,
-      toDelete: null
+      toDelete: null,
     };
   },
   methods: {
     fetchUsers() {
-      api.get('/users')
-        .then(res => this.users = res.data)
-        .catch(err => this.showMessage(this.errToText(err), 'error'));
+      api
+        .get("/users")
+        .then((res) => (this.users = res.data))
+        .catch((err) => this.showMessage(this.errToText(err), "error"));
     },
     submitForm() {
       const isUpdate = !!this.editId;
-      const url = isUpdate ? `/users/${this.editId}` : '/users';
+      const url = isUpdate ? `/users/${this.editId}` : "/users";
       const method = isUpdate ? api.put : api.post;
 
       method(url, this.form)
         .then(() => {
           this.fetchUsers();
           this.resetForm();
-          this.showMessage(`User ${isUpdate ? 'updated' : 'added'}!`, 'success');
+          this.showMessage(
+            `User ${isUpdate ? "updated" : "added"}!`,
+            "success"
+          );
         })
-        .catch(err => this.showMessage(this.errToText(err), 'error'));
+        .catch((err) => this.showMessage(this.errToText(err), "error"));
     },
     editUser(user) {
       this.form = { ...user };
@@ -130,20 +149,21 @@ export default {
       this.showModal = false;
     },
     deleteUserConfirmed() {
-      api.delete(`/users/${this.toDelete.id}`)
+      api
+        .delete(`/users/${this.toDelete.id}`)
         .then(() => {
           this.fetchUsers();
-          this.showMessage('User deleted.', 'success');
+          this.showMessage("User deleted.", "success");
         })
-        .catch(err => this.showMessage(this.errToText(err), 'error'))
+        .catch((err) => this.showMessage(this.errToText(err), "error"))
         .finally(() => this.cancelDelete());
     },
     resetForm() {
       this.form = {
-        username: '',
-        email: '',
-        user_type: 'student',
-        is_active: true
+        username: "",
+        email: "",
+        user_type: "student",
+        is_active: true,
       };
       this.editId = null;
     },
@@ -151,19 +171,21 @@ export default {
       this.message = msg;
       this.messageType = type;
       setTimeout(() => {
-        this.message = '';
-        this.messageType = '';
+        this.message = "";
+        this.messageType = "";
       }, 3000);
     },
     errToText(err) {
       return err.response
-        ? `Server error ${err.response.status}: ${err.response.data || err.message}`
+        ? `Server error ${err.response.status}: ${
+            err.response.data || err.message
+          }`
         : `Action Failed: ${err.message}`;
-    }
+    },
   },
   mounted() {
     this.fetchUsers();
-  }
+  },
 };
 </script>
 
@@ -172,7 +194,7 @@ export default {
   max-width: 900px;
   margin: 0 auto;
   padding: 2rem;
-  font-family: 'Segoe UI', sans-serif;
+  font-family: "Segoe UI", sans-serif;
 }
 
 h2 {
@@ -203,7 +225,7 @@ h2 {
   background: #fff;
   padding: 1.5rem;
   border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   margin-bottom: 2rem;
 }
 .form-row {
@@ -219,7 +241,8 @@ h2 {
   font-weight: 600;
   margin-bottom: 0.5rem;
 }
-input, select {
+input,
+select {
   padding: 0.6rem;
   border: 1px solid #ddd;
   border-radius: 5px;
@@ -282,7 +305,7 @@ input, select {
   padding: 1rem;
   border-radius: 10px;
   margin-bottom: 1rem;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 .user-details {
   display: flex;
@@ -323,8 +346,11 @@ input, select {
 
 .modal-overlay {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.5);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -336,7 +362,7 @@ input, select {
   width: 100%;
   max-width: 400px;
   text-align: center;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
 }
 .modal h3 {
   margin-bottom: 1rem;

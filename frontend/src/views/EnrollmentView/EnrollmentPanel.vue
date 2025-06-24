@@ -3,12 +3,18 @@
     <h2>📚 Enrollment Panel</h2>
 
     <!-- Alerts -->
-    <div v-if="message" :class="['alert-message', messageType]">{{ message }}</div>
+    <div v-if="message" :class="['alert-message', messageType]">
+      {{ message }}
+    </div>
 
     <!-- Course Dropdown -->
     <div class="form-group">
       <label for="course-select">Course Code</label>
-      <select id="course-select" v-model="selectedCourseId" @change="fetchEnrollments">
+      <select
+        id="course-select"
+        v-model="selectedCourseId"
+        @change="fetchEnrollments"
+      >
         <option value="">-- Select Course --</option>
         <option v-for="course in courses" :key="course.id" :value="course.id">
           {{ course.course_code }} - {{ course.course_name }}
@@ -24,7 +30,9 @@
       <h3>👥 Students</h3>
       <ul class="student-list">
         <li v-for="student in students" :key="student.id">
-          <span><strong>{{ student.name || 'N/A' }}</strong></span>
+          <span
+            ><strong>{{ student.name || "N/A" }}</strong></span
+          >
           <div>
             <button
               v-if="!isEnrolled(student.id)"
@@ -44,7 +52,9 @@
         </li>
       </ul>
     </div>
-    <p v-if="!loading && !error && students.length === 0">No students available.</p>
+    <p v-if="!loading && !error && students.length === 0">
+      No students available.
+    </p>
 
     <!-- Enroll Modal -->
     <div v-if="showModal" class="modal-overlay">
@@ -55,7 +65,11 @@
             <label for="course-select-modal">Course</label>
             <select id="course-select-modal" v-model="form.course_id" required>
               <option value="">-- Select Course --</option>
-              <option v-for="course in courses" :key="course.id" :value="course.id">
+              <option
+                v-for="course in courses"
+                :key="course.id"
+                :value="course.id"
+              >
                 {{ course.course_code }} - {{ course.course_name }}
               </option>
             </select>
@@ -70,7 +84,9 @@
           </div>
           <div class="modal-actions">
             <button type="submit" class="btn primary">Enroll</button>
-            <button type="button" @click="closeModal" class="btn">Cancel</button>
+            <button type="button" @click="closeModal" class="btn">
+              Cancel
+            </button>
           </div>
         </form>
       </div>
@@ -81,7 +97,8 @@
       <div class="modal">
         <p>
           Unenroll <strong>{{ selectedStudent?.name }}</strong> from
-          <strong>{{ selectedCourse?.course_code }}</strong>?
+          <strong>{{ selectedCourse?.course_code }}</strong
+          >?
         </p>
         <div class="modal-actions">
           <button @click="unenrollStudent" class="btn delete">Yes</button>
@@ -93,28 +110,28 @@
 </template>
 
 <script>
-import api from '@/api';
+import api from "@/services/api";
 
 export default {
-  name: 'EnrollmentPanel',
+  name: "EnrollmentPanel",
   data() {
     return {
       courses: [],
       students: [],
       enrollments: [],
-      selectedCourseId: '',
+      selectedCourseId: "",
       loading: false,
       error: null,
-      message: '',
-      messageType: '',
+      message: "",
+      messageType: "",
       showModal: false,
       showUnenrollModal: false,
       selectedStudent: null,
       selectedCourse: null,
       form: {
-        student_id: '',
-        course_id: '',
-        status: 'active',
+        student_id: "",
+        course_id: "",
+        status: "active",
       },
     };
   },
@@ -126,24 +143,27 @@ export default {
     async fetchStudents() {
       try {
         this.loading = true;
-        const response = await api.get('/users?type=student');
-        console.log('Students Response:', response.data);
+        const response = await api.get("/users?type=student");
+        console.log("Students Response:", response.data);
         this.students = response.data
-          .filter((user) => user.user_type === 'student')
+          .filter((user) => user.user_type === "student")
           .map((user) => ({
             id: user.id,
-            name: user.full_name || user.username || 'Unnamed',
+            name: user.full_name || user.username || "Unnamed",
           }));
         if (this.students.length === 0) {
-          this.showMessage('⚠️ No students found.', 'error');
+          this.showMessage("⚠️ No students found.", "error");
         }
       } catch (error) {
-        console.error('Error fetching students:', {
+        console.error("Error fetching students:", {
           message: error.message,
           response: error.response?.data,
           status: error.response?.status,
         });
-        this.showMessage('❌ Failed to fetch students. Check console for details.', 'error');
+        this.showMessage(
+          "❌ Failed to fetch students. Check console for details.",
+          "error"
+        );
       } finally {
         this.loading = false;
       }
@@ -153,15 +173,19 @@ export default {
         this.loading = true;
         const url = this.selectedCourseId
           ? `/course_enrollments/course/${this.selectedCourseId}`
-          : '/course_enrollments';
+          : "/course_enrollments";
         const response = await api.get(url);
-        console.log('Enrollments Response:', response.data);
+        console.log("Enrollments Response:", response.data);
         this.enrollments = Array.isArray(response.data) ? response.data : [];
 
         // Derive unique courses from enrollments
         const courseMap = new Map();
         this.enrollments.forEach((enrollment) => {
-          if (enrollment.course_id && enrollment.course_code && enrollment.course_name) {
+          if (
+            enrollment.course_id &&
+            enrollment.course_code &&
+            enrollment.course_name
+          ) {
             courseMap.set(enrollment.course_id, {
               id: enrollment.course_id,
               course_code: enrollment.course_code,
@@ -170,19 +194,22 @@ export default {
           }
         });
         this.courses = Array.from(courseMap.values());
-        console.log('Derived Courses:', this.courses);
+        console.log("Derived Courses:", this.courses);
 
         if (this.courses.length === 0) {
-          this.showMessage('⚠️ No courses found in enrollments.', 'error');
+          this.showMessage("⚠️ No courses found in enrollments.", "error");
         }
       } catch (error) {
-        console.error('Error fetching enrollments:', {
+        console.error("Error fetching enrollments:", {
           message: error.message,
           response: error.response?.data,
           status: error.response?.status,
         });
-        this.showMessage('❌ Failed to load enrollments. Check console for details.', 'error');
-        this.error = 'Failed to load enrollments.';
+        this.showMessage(
+          "❌ Failed to load enrollments. Check console for details.",
+          "error"
+        );
+        this.error = "Failed to load enrollments.";
       } finally {
         this.loading = false;
       }
@@ -199,8 +226,8 @@ export default {
       this.selectedStudent = student;
       this.form = {
         student_id: student.id,
-        course_id: this.selectedCourseId || '',
-        status: 'active',
+        course_id: this.selectedCourseId || "",
+        status: "active",
       };
       this.showModal = true;
     },
@@ -213,25 +240,31 @@ export default {
     },
     closeModal() {
       this.showModal = false;
-      this.form = { student_id: '', course_id: '', status: 'active' };
+      this.form = { student_id: "", course_id: "", status: "active" };
       this.selectedStudent = null;
     },
     async enrollStudent() {
       try {
-        await api.post('/course_enrollments', {
+        await api.post("/course_enrollments", {
           ...this.form,
-          enrollment_date: new Date().toISOString().slice(0, 19).replace('T', ' '),
+          enrollment_date: new Date()
+            .toISOString()
+            .slice(0, 19)
+            .replace("T", " "),
         });
-        this.showMessage('✅ Student enrolled successfully!', 'success');
+        this.showMessage("✅ Student enrolled successfully!", "success");
         this.fetchEnrollments();
         this.closeModal();
       } catch (error) {
-        console.error('Error enrolling student:', {
+        console.error("Error enrolling student:", {
           message: error.message,
           response: error.response?.data,
           status: error.response?.status,
         });
-        this.showMessage('❌ Failed to enroll student. Check console for details.', 'error');
+        this.showMessage(
+          "❌ Failed to enroll student. Check console for details.",
+          "error"
+        );
       }
     },
     async unenrollStudent() {
@@ -242,30 +275,33 @@ export default {
             e.course_id === parseInt(this.selectedCourseId)
         );
         if (!enrollment) {
-          this.showMessage('❌ Enrollment not found.', 'error');
+          this.showMessage("❌ Enrollment not found.", "error");
           return;
         }
         await api.delete(`/course_enrollments/${enrollment.id}`);
-        this.showMessage('✅ Student unenrolled successfully!', 'success');
+        this.showMessage("✅ Student unenrolled successfully!", "success");
         this.fetchEnrollments();
         this.showUnenrollModal = false;
         this.selectedStudent = null;
         this.selectedCourse = null;
       } catch (error) {
-        console.error('Error unenrolling student:', {
+        console.error("Error unenrolling student:", {
           message: error.message,
           response: error.response?.data,
           status: error.response?.status,
         });
-        this.showMessage('❌ Failed to unenroll student. Check console for details.', 'error');
+        this.showMessage(
+          "❌ Failed to unenroll student. Check console for details.",
+          "error"
+        );
       }
     },
     showMessage(msg, type) {
       this.message = msg;
       this.messageType = type;
       setTimeout(() => {
-        this.message = '';
-        this.messageType = '';
+        this.message = "";
+        this.messageType = "";
       }, 3000);
     },
   },
@@ -280,7 +316,7 @@ export default {
   background: #f9f9f9;
   color: #333;
   border-radius: 12px;
-  font-family: 'Segoe UI', sans-serif;
+  font-family: "Segoe UI", sans-serif;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
