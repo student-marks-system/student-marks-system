@@ -1,14 +1,12 @@
 <?php
 
-use Slim\App;
+use Slim\Routing\RouteCollectorProxy;
 use App\Controllers\AuthController;
 
-return function ($app) {
-    $app->group('/auth', function ($group) {
-        $group->post('/login', [AuthController::class, 'login']);
-        $group->post('/logout', [AuthController::class, 'logout']);
-        $group->post('/refresh', [AuthController::class, 'refreshToken']);
+return function (RouteCollectorProxy $group) {
+    $group->group('/auth', function (RouteCollectorProxy $subgroup) {
+        $subgroup->post('/login', [AuthController::class, 'login']);
+        $subgroup->post('/logout', [AuthController::class, 'logout']);
+        $subgroup->post('/refresh', [AuthController::class, 'refreshToken']);
     });
-
-    // Removed duplicate /user/profile route to avoid conflict
 }; 

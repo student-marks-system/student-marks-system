@@ -1,14 +1,14 @@
 <?php
 
+use Slim\Routing\RouteCollectorProxy;
 use App\Controllers\RemarkRequestController;
 
-return function ($app) {
+return function (RouteCollectorProxy $group) {
     $controller = new RemarkRequestController();
-
-    $app->group('/remark-requests', function ($group) use ($controller) {
-        $group->post('/submit', [$controller, 'submitRequest']);
-        $group->get('/student/{student_id}', [$controller, 'getStudentRequests']);
-        $group->get('/course/{course_id}', [$controller, 'getRequestsForLecturer']);
-        $group->post('/review/{id}', [$controller, 'reviewRequest']);
+    $group->group('/remark-requests', function (RouteCollectorProxy $subgroup) use ($controller) {
+        $subgroup->post('/submit', [$controller, 'submitRequest']);
+        $subgroup->get('/student/{student_id}', [$controller, 'getStudentRequests']);
+        $subgroup->get('/course/{course_id}', [$controller, 'getRequestsForLecturer']);
+        $subgroup->post('/review/{id}', [$controller, 'reviewRequest']);
     });
 };

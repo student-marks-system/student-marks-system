@@ -1,16 +1,10 @@
 <?php
 
-use Slim\App;
+use Slim\Routing\RouteCollectorProxy;
 use App\Controllers\AdminController;
 
-return function ($app) {
+return function (RouteCollectorProxy $group) {
     $ctrl = new AdminController();
-
-    // Middleware removed can be added later with authentication
-    
-    // System logs endpoint
-    $app->get('/admin/systemlogs', [$ctrl, 'getSystemLogs']);
-
-    // Mark updates endpoint
-    $app->get('/admin/mark-updates', [$ctrl, 'getMarkUpdates']);
+    $group->get('/admin/systemlogs', [$ctrl, 'getSystemLogs']);
+    $group->get('/admin/mark-updates', [$ctrl, 'getMarkUpdates']);
 };

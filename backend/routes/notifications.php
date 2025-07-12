@@ -1,8 +1,8 @@
 <?php
-use Slim\App;
+use Slim\Routing\RouteCollectorProxy;
 use App\Controllers\NotificationController;
 
-return function ($app) {
-    $app->get('/notifications', [NotificationController::class, 'index']);
-    $app->delete('/notifications/{id}', [NotificationController::class, 'delete']);
+return function (RouteCollectorProxy $group) {
+    $group->get('/notifications', [NotificationController::class, 'index']);
+    $group->delete('/notifications/{id}', [NotificationController::class, 'delete']);
 };

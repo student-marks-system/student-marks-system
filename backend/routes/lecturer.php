@@ -1,8 +1,9 @@
 <?php
 
+use Slim\Routing\RouteCollectorProxy;
 use App\Controllers\LecturerController;
 
-return function ($group) {
+return function (RouteCollectorProxy $group) {
     $authMiddleware = \App\Middleware\JWTAuthMiddleware::class;
 
     $group->get('/lecturer/{lecturerId}/dashboard', [LecturerController::class, 'getDashboard'])->add($authMiddleware);

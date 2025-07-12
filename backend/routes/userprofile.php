@@ -1,11 +1,12 @@
 <?php
 
+use Slim\Routing\RouteCollectorProxy;
 use App\Controllers\AuthController;
 use App\Controllers\UserController;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
-return function ($group) {
+return function (RouteCollectorProxy $group) {
     $authMiddleware = \App\Middleware\JWTAuthMiddleware::class;
 
     $group->get('/user/profile', [UserController::class, 'getProfile'])->add($authMiddleware);

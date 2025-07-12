@@ -10,10 +10,14 @@ class CourseController extends BaseController
     public function getAll(Request $request, Response $response): Response
     {
         try {
-            $stmt = $this->db->query("SELECT * FROM courses");
+            error_log('Fetching all courses');
+            $stmt = $this->db->query("SELECT * FROM courses ORDER BY course_code ASC");
             $courses = $stmt->fetchAll();
+            
+            error_log('Found ' . count($courses) . ' courses');
             return $this->successResponse($response, $courses);
         } catch (\PDOException $e) {
+            error_log('Database error while fetching courses: ' . $e->getMessage());
             return $this->errorResponse($response, "Failed to fetch courses: " . $e->getMessage(), 500);
         }
     }
@@ -22,12 +26,22 @@ class CourseController extends BaseController
     {
         try {
             $data = $request->getParsedBody();
+            error_log('Creating new course: ' . json_encode($data));
 
             // Validate required fields
             $required = ['course_code', 'course_name', 'credits', 'semester', 'academic_year'];
             $missing = $this->validateRequired($data, $required);
             if (!empty($missing)) {
+                error_log('Missing required fields: ' . implode(', ', $missing));
                 return $this->errorResponse($response, "Missing required fields: " . implode(', ', $missing), 400);
+            }
+
+            // Check if course code already exists
+            $existingCourse = $this->db->query("SELECT id FROM courses WHERE course_code = " . 
+                $this->db->quote($data['course_code']))->fetch();
+            if ($existingCourse) {
+                error_log('Course code already exists: ' . $data['course_code']);
+                return $this->errorResponse($response, "Course code already exists", 409);
             }
 
             $sql = "INSERT INTO courses (course_code, course_name, credits, semester, academic_year, is_active) 
@@ -44,8 +58,10 @@ class CourseController extends BaseController
             ]);
 
             $id = $this->db->lastInsertId();
+            error_log('Course created successfully with ID: ' . $id);
             return $this->successResponse($response, ['id' => $id], 'Course created successfully');
         } catch (\PDOException $e) {
+            error_log('Database error while creating course: ' . $e->getMessage());
             return $this->errorResponse($response, "Failed to create course: " . $e->getMessage(), 500);
         }
     }
@@ -55,12 +71,30 @@ class CourseController extends BaseController
         try {
             $data = $request->getParsedBody();
             $id = $args['id'];
+            error_log('Updating course ID ' . $id . ': ' . json_encode($data));
 
             // Validate required fields
             $required = ['course_code', 'course_name', 'credits', 'semester', 'academic_year'];
             $missing = $this->validateRequired($data, $required);
             if (!empty($missing)) {
+                error_log('Missing required fields: ' . implode(', ', $missing));
                 return $this->errorResponse($response, "Missing required fields: " . implode(', ', $missing), 400);
+            }
+
+            // Check if course exists
+            $existingCourse = $this->db->query("SELECT id FROM courses WHERE id = " . 
+                $this->db->quote($id))->fetch();
+            if (!$existingCourse) {
+                error_log('Course not found with ID: ' . $id);
+                return $this->errorResponse($response, "Course not found", 404);
+            }
+
+            // Check if course code is unique (excluding current course)
+            $duplicateCode = $this->db->query("SELECT id FROM courses WHERE course_code = " . 
+                $this->db->quote($data['course_code']) . " AND id != " . $this->db->quote($id))->fetch();
+            if ($duplicateCode) {
+                error_log('Course code already exists: ' . $data['course_code']);
+                return $this->errorResponse($response, "Course code already exists", 409);
             }
 
             $sql = "UPDATE courses SET 
@@ -83,12 +117,10 @@ class CourseController extends BaseController
                 'is_active' => $data['is_active'] ?? true
             ]);
 
-            if (!$success) {
-                return $this->errorResponse($response, "Course not found", 404);
-            }
-
+            error_log('Course updated successfully: ' . $id);
             return $this->successResponse($response, null, 'Course updated successfully');
         } catch (\PDOException $e) {
+            error_log('Database error while updating course: ' . $e->getMessage());
             return $this->errorResponse($response, "Failed to update course: " . $e->getMessage(), 500);
         }
     }
@@ -97,16 +129,32 @@ class CourseController extends BaseController
     {
         try {
             $id = $args['id'];
-            $sql = "DELETE FROM courses WHERE id = :id";
-            $stmt = $this->db->prepare($sql);
-            $success = $stmt->execute(['id' => $id]);
+            error_log('Deleting course ID: ' . $id);
 
-            if (!$success) {
+            // Check if course exists
+            $existingCourse = $this->db->query("SELECT id FROM courses WHERE id = " . 
+                $this->db->quote($id))->fetch();
+            if (!$existingCourse) {
+                error_log('Course not found with ID: ' . $id);
                 return $this->errorResponse($response, "Course not found", 404);
             }
 
+            // Check if course has any dependencies
+            $hasEnrollments = $this->db->query("SELECT COUNT(*) FROM course_enrollments WHERE course_id = " . 
+                $this->db->quote($id))->fetchColumn();
+            if ($hasEnrollments > 0) {
+                error_log('Cannot delete course with existing enrollments: ' . $id);
+                return $this->errorResponse($response, "Cannot delete course with existing enrollments", 409);
+            }
+
+            $sql = "DELETE FROM courses WHERE id = :id";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute(['id' => $id]);
+
+            error_log('Course deleted successfully: ' . $id);
             return $this->successResponse($response, null, 'Course deleted successfully');
         } catch (\PDOException $e) {
+            error_log('Database error while deleting course: ' . $e->getMessage());
             return $this->errorResponse($response, "Failed to delete course: " . $e->getMessage(), 500);
         }
     }

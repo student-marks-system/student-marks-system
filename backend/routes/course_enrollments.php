@@ -1,15 +1,10 @@
 <?php
-use Slim\App;
+use Slim\Routing\RouteCollectorProxy;
 use App\Controllers\EnrollmentController;
 
-return function ($app) {
-    // List all OR by course
-    $app->get('/course_enrollments', [EnrollmentController::class, 'index']);
-    $app->get('/course_enrollments/course/{course_id}', [EnrollmentController::class, 'index']);
-
-    // Create
-    $app->post('/course_enrollments', [EnrollmentController::class, 'store']);
-
-    // Delete
-    $app->delete('/course_enrollments/{id}', [EnrollmentController::class, 'delete']);
+return function (RouteCollectorProxy $group) {
+    $group->get('/course_enrollments', [EnrollmentController::class, 'index']);
+    $group->get('/course_enrollments/course/{course_id}', [EnrollmentController::class, 'index']);
+    $group->post('/course_enrollments', [EnrollmentController::class, 'store']);
+    $group->delete('/course_enrollments/{id}', [EnrollmentController::class, 'delete']);
 };

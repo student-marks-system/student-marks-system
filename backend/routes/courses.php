@@ -1,13 +1,12 @@
 <?php
 
-use Slim\App;
+use Slim\Routing\RouteCollectorProxy;
 use App\Controllers\CourseController;
 
-return function ($app) {
+return function (RouteCollectorProxy $group) {
     $controller = new CourseController();
-
-    $app->get('/courses', [$controller, 'getAll']);
-    $app->post('/courses', [$controller, 'create']);
-    $app->put('/courses/{id}', [$controller, 'update']);
-    $app->delete('/courses/{id}', [$controller, 'delete']);
+    $group->get('/courses', [$controller, 'getAll']);
+    $group->post('/courses', [$controller, 'create']);
+    $group->put('/courses/{id}', [$controller, 'update']);
+    $group->delete('/courses/{id}', [$controller, 'delete']);
 };

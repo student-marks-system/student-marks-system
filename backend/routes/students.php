@@ -1,12 +1,11 @@
 <?php
 
-use Slim\App;
+use Slim\Routing\RouteCollectorProxy;
 use App\Controllers\StudentController;
 
-return function ($app) {
-    // Student Management Routes (Lecturer only)
-    $app->get('/students', [StudentController::class, 'index']);
-    $app->post('/students', [StudentController::class, 'store']);
-    $app->put('/students/{id}', [StudentController::class, 'update']);
-    $app->delete('/students/{id}', [StudentController::class, 'destroy']);
+return function (RouteCollectorProxy $group) {
+    $group->get('/students', [StudentController::class, 'index']);
+    $group->post('/students', [StudentController::class, 'store']);
+    $group->put('/students/{id}', [StudentController::class, 'update']);
+    $group->delete('/students/{id}', [StudentController::class, 'destroy']);
 };
